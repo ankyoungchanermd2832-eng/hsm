@@ -22,6 +22,10 @@ const PALETTE: StorageType[] = ['bookshelf', 'drawer', 'wardrobe', 'shelf']
 const LONG_PRESS_MS = 1000
 // 누르고 있는 동안 손가락/마우스가 이만큼(px) 넘게 움직이면 누르기를 취소한다.
 const PRESS_MOVE_CANCEL_PX = 8
+// 짧게 두 번 누른 것을 "더블클릭"으로 인정하는 간격(ms).
+// 브라우저 기본 dblclick 이벤트를 쓰지 않고 직접 감지한다 - 그래야 휴대폰에서
+// 두 번 빠르게 탭할 때 브라우저가 자체적으로 띄우는 단어 선택/검색 팝업이 끼어들지 않는다.
+const DOUBLE_TAP_MS = 400
 
 interface RoomEditorProps {
   room: Room
@@ -40,6 +44,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
   const draggingRef = useRef<{ unitId: string } | null>(null)
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPressRef = useRef<{ unitId: string; pointerId: number; startX: number; startY: number } | null>(null)
+  const lastTapRef = useRef<{ unitId: string; time: number } | null>(null)
   const [pressingUnitId, setPressingUnitId] = useState<string | null>(null)
 
   const selectedUnit = room.storageUnits.find((u) => u.id === selectedUnitId) ?? null
@@ -74,9 +79,13 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
   }
 
   // 가구를 바로 옮기지 않고, LONG_PRESS_MS 만큼 누르고 있어야 드래그가 시작되게 한다.
-  // (짧게 누르는 동작은 두 번 눌러서 편집창을 여는 더블클릭과 구분하기 위함)
+  // (짧게 누르는 동작은 두 번 눌러서 편집창을 여는 더블클릭/더블탭과 구분하기 위함)
+  // preventDefault 로 브라우저 기본 동작(텍스트 선택, 확대, 길게 누르기 메뉴 등)이
+  // 아예 시작되지 않도록 막는다 - 더블클릭 감지도 브라우저의 dblclick 대신 직접 처리해서
+  // 휴대폰에서 두 번 탭할 때 뜨는 브라우저 자체 팝업(검색/복사 등)과 부딪히지 않게 한다.
   function handleUnitPointerDown(e: React.PointerEvent, unitId: string) {
     e.stopPropagation()
+    e.preventDefault()
     const pointerId = e.pointerId
     ;(e.target as HTMLElement).setPointerCapture(pointerId)
     pendingPressRef.current = { unitId, pointerId, startX: e.clientX, startY: e.clientY }
@@ -100,12 +109,30 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
     const dy = e.clientY - pending.startY
     if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
       cancelPendingPress()
+      lastTapRef.current = null
     }
   }
 
-  function handleUnitPointerUp(e: React.PointerEvent) {
-    if (pendingPressRef.current?.pointerId === e.pointerId) {
-      cancelPendingPress()
+  // 짧게 누르고 뗀 경우(드래그로 이어지지 않은 경우)만 "탭"으로 인정하고,
+  // DOUBLE_TAP_MS 안에 같은 가구를 두 번 탭하면 편집창을 연다.
+  function handleUnitPointerUp(e: React.PointerEvent, unitId: string) {
+    const pending = pendingPressRef.current
+    const wasCleanPress = pending?.pointerId === e.pointerId && pending.unitId === unitId
+    const wasDragging = draggingRef.current?.unitId === unitId
+    cancelPendingPress()
+    if (wasDragging) return
+
+    if (wasCleanPress) {
+      const now = Date.now()
+      const last = lastTapRef.current
+      if (last && last.unitId === unitId && now - last.time < DOUBLE_TAP_MS) {
+        lastTapRef.current = null
+        setSelectedUnitId(unitId)
+      } else {
+        lastTapRef.current = { unitId, time: now }
+      }
+    } else {
+      lastTapRef.current = null
     }
   }
 
@@ -119,11 +146,6 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
   function handleFloorPointerUp() {
     draggingRef.current = null
     cancelPendingPress()
-  }
-
-  function handleUnitDoubleClick(e: React.MouseEvent, unitId: string) {
-    e.stopPropagation()
-    setSelectedUnitId(unitId)
   }
 
   return (
@@ -204,9 +226,8 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
                 unit={u}
                 onPointerDown={(e) => handleUnitPointerDown(e, u.id)}
                 onPointerMove={handleUnitPointerMove}
-                onPointerUp={handleUnitPointerUp}
-                onPointerCancel={handleUnitPointerUp}
-                onDoubleClick={(e) => handleUnitDoubleClick(e, u.id)}
+                onPointerUp={(e) => handleUnitPointerUp(e, u.id)}
+                onPointerCancel={(e) => handleUnitPointerUp(e, u.id)}
                 selected={u.id === selectedUnitId}
                 highlighted={u.id === highlightUnitId}
                 pressing={u.id === pressingUnitId}
@@ -256,7 +277,6 @@ function UnitTile({
   onPointerMove,
   onPointerUp,
   onPointerCancel,
-  onDoubleClick,
   selected,
   highlighted,
   pressing,
@@ -266,7 +286,6 @@ function UnitTile({
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: (e: React.PointerEvent) => void
   onPointerCancel: (e: React.PointerEvent) => void
-  onDoubleClick: (e: React.MouseEvent) => void
   selected: boolean
   highlighted: boolean
   pressing: boolean
@@ -282,9 +301,8 @@ function UnitTile({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      onDoubleClick={onDoubleClick}
       onContextMenu={(e) => e.preventDefault()}
-      title="꾹 눌러서(약 1초) 위치 이동 · 더블클릭해서 내용 편집"
+      title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
     >
       <IsoCube
         color={visual.color}

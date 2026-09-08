@@ -9,10 +9,7 @@ echo --------------------------------------------
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [Notice] Node.js is required to run this app.
-  echo          Install it from https://nodejs.org then double-click this file again.
-  echo.
-  pause
+  wscript.exe "%~dp0msgbox.vbs" "Node.js가 필요합니다. https://nodejs.org 에서 설치한 뒤 run.vbs를 다시 실행해주세요."
   exit /b 1
 )
 
@@ -28,30 +25,32 @@ if not errorlevel 1 (
   )
 )
 
+echo Checking if the server is already running...
+curl -s -o nul --max-time 1 http://localhost:5173/ 2>nul
+if not errorlevel 1 goto serverready
+
 echo Checking dependencies, this can take a minute the first time...
 call npm install
 if errorlevel 1 (
-  echo.
-  echo [Error] Install failed. Please check your internet connection and try again.
-  pause
+  wscript.exe "%~dp0msgbox.vbs" "설치에 실패했어요. 인터넷 연결을 확인한 뒤 다시 실행해주세요."
   exit /b 1
 )
 
-echo Starting the server in a new window...
-start "Home Storage App Server" cmd /k "npm run dev"
+echo Starting the server in the background (no visible window)...
+wscript.exe "%~dp0start-server-hidden.vbs"
 
 set /a tries=0
 :waitloop
 curl -s -o nul http://localhost:5173/ 2>nul
 if not errorlevel 1 goto serverready
 set /a tries+=1
-if %tries% GEQ 30 goto serverready
+if %tries% GEQ 30 (
+  wscript.exe "%~dp0msgbox.vbs" "서버 시작이 오래 걸리고 있어요. .data\server.log 파일을 확인해주세요."
+  goto serverready
+)
 timeout /t 1 >nul
 goto waitloop
 
 :serverready
 start "" http://localhost:5173/
-echo.
-echo The app is running in the other window titled "Home Storage App Server".
-echo Close that window to stop the app. This window can be closed now.
-pause
+exit /b 0
