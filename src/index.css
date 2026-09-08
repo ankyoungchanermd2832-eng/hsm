@@ -1,0 +1,184 @@
+:root {
+  --bg: #faf9f7;
+  --panel: #ffffff;
+  --border: #e4e1da;
+  --text: #4b4740;
+  --text-h: #221f1a;
+  --muted: #8a8478;
+  --accent: #d97b3f;
+  --accent-bg: rgba(217, 123, 63, 0.12);
+  --accent-border: rgba(217, 123, 63, 0.4);
+  --shadow: 0 20px 45px -15px rgba(30, 25, 15, 0.35);
+  --sans: 'Pretendard', 'Apple SD Gothic Neo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--text-h);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select {
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  color: var(--text-h);
+  background: var(--panel);
+}
+
+input:focus, select:focus {
+  outline: 2px solid var(--accent-border);
+}
+
+input[type='range'] {
+  accent-color: var(--accent);
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-h);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.btn-active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-danger {
+  color: #c0394b;
+  border-color: rgba(192, 57, 75, 0.35);
+}
+
+.btn-danger:hover {
+  background: rgba(192, 57, 75, 0.08);
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.field input, .field select {
+  width: 100%;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 17, 12, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal-card {
+  background: var(--bg);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+  max-width: 94vw;
+  box-sizing: border-box;
+}
+
+.modal-card h3 {
+  margin-top: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* 검색으로 찾아온 위치(방/수납가구/바구니)를 눈에 띄게 깜빡여서 안내한다 */
+@keyframes pulse-highlight {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 65%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+.pulse-highlight {
+  animation: pulse-highlight 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-highlight {
+    animation: none;
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
