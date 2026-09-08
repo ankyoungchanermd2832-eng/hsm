@@ -160,25 +160,27 @@ input[type='range'] {
 
 /* 검색으로 찾아온 위치(방/수납가구/바구니)를 눈에 띄게 깜빡여서 안내한다 */
 @keyframes pulse-highlight {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 65%, transparent);
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      0 0 0 3px color-mix(in srgb, var(--accent) 90%, transparent);
   }
-  70% {
-    box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  50% {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      0 0 0 18px color-mix(in srgb, var(--accent) 0%, transparent);
   }
 }
 
 .pulse-highlight {
-  animation: pulse-highlight 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-highlight 1s ease-in-out infinite;
+  position: relative;
+  z-index: 20;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse-highlight {
     animation: none;
-    outline: 3px solid var(--accent);
-    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--accent);
   }
 }

@@ -58,6 +58,30 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* 검색으로 찾아온 방은 사진 위에서도 잘 보이도록 배경을 밝게 깜빡인다 */
+@keyframes room-box-flash {
+  0%, 100% {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+.room-box.pulse-highlight {
+  animation:
+    pulse-highlight 1s ease-in-out infinite,
+    room-box-flash 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-box.pulse-highlight {
+    animation: none;
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+}
+
 .room-box-label {
   position: absolute;
   top: -1px;

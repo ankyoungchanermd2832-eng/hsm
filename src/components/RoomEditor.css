@@ -201,6 +201,30 @@
   touch-action: manipulation;
 }
 
+/* 검색으로 찾아온 가구는 box-shadow 링(pulse-highlight)에 더해 살짝 커졌다 작아지며 눈에 띄게 한다 */
+@keyframes unit-tile-pulse-scale {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+.unit-tile.pulse-highlight {
+  animation:
+    pulse-highlight 1s ease-in-out infinite,
+    unit-tile-pulse-scale 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-tile.pulse-highlight {
+    animation: none;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+}
+
 .unit-tile:active {
   cursor: grabbing;
 }
