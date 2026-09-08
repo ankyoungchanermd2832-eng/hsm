@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# 로컬 동기화 서버가 저장하는 개인 데이터 (도면/방/수납공간/물건) - 절대 커밋하지 않는다
+.data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

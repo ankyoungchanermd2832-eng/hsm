@@ -60,6 +60,8 @@ interface HouseState {
 
   search: (query: string) => SearchResult[]
   resetHouse: () => void
+  // 다른 기기와의 동기화 등으로 house 전체를 통째로 교체할 때 사용한다
+  hydrateHouse: (house: House) => void
 }
 
 const emptyHouse: House = {
@@ -418,6 +420,8 @@ export const useHouseStore = create<HouseState>()(
       },
 
       resetHouse: () => set({ house: emptyHouse }),
+
+      hydrateHouse: (house) => set({ house }),
     }),
     { name: 'home-storage-app' },
   ),
