@@ -65,13 +65,21 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
     // 이미 방을 그려둔 상태에서 재업로드하면 기존 방 배치를 건드리지 않는다.
     if (house.rooms.length === 0) {
       setProcessingStage('detecting')
+      let detected: { x: number; y: number; width: number; height: number }[] = []
       try {
-        const detected = await detectRoomsFromFloorPlan(stylized)
+        detected = await detectRoomsFromFloorPlan(stylized)
+      } catch (err) {
+        console.error('방 구역을 자동으로 나누지 못했어요. 기본 방 하나로 시작할게요.', err)
+      }
+      if (detected.length === 0) {
+        // 벽을 인식하지 못했을 때도 빈 도면으로 두지 않고, 도면 전체를 덮는
+        // 기본 방 하나를 만들어서 바로 수납가구를 배치할 수 있게 한다.
+        // 필요하면 "방 추가하기"로 더 잘게 나눌 수 있다.
+        addRoom({ name: '방 1', kind: 'other', x: 4, y: 4, width: 92, height: 92 })
+      } else {
         detected.forEach((box, i) => {
           addRoom({ name: `방 ${i + 1}`, kind: 'other', ...box })
         })
-      } catch (err) {
-        console.error('방 구역을 자동으로 나누지 못했어요. 직접 방을 그려주세요.', err)
       }
     }
     setProcessingStage(null)
@@ -151,7 +159,10 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
       {processingStage === 'detecting' && (
         <div className="floorplan-empty">
           <p>🧭 벽 구조를 보고 방 구역을 자동으로 나누고 있어요…</p>
-          <p className="hint">방이 이상하게 나뉘었다면 나중에 이름/영역을 직접 고칠 수 있어요.</p>
+          <p className="hint">
+            방이 이상하게 나뉘었다면 나중에 이름/영역을 직접 고칠 수 있어요. 벽을 잘 못 찾으면 도면
+            전체를 방 1개로 시작하고, "➕ 방 추가하기"로 필요한 만큼 나눌 수 있어요.
+          </p>
         </div>
       )}
 
