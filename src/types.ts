@@ -56,14 +56,29 @@ export interface Item {
   quantity?: number
 }
 
-// 수납공간 안에 진열된 바구니 - 가구의 세로 층(row)과 가로 칸(col) 중 한 자리에 놓인다
+// 수납공간 안에 진열된 바구니 - 가구의 세로 층(row)과 가로 칸(col) 중 한 자리에 놓인다.
+// 그 칸을 CellSplit 으로 더 잘게 나눴다면 subRow/subCol 로 그 안에서의 위치를 나타낸다.
 export interface Basket {
   id: string
   name: string
   row: number
   col: number
+  subRow?: number
+  subCol?: number
   items: Item[]
 }
+
+// 가구의 특정 칸(row, col) 내부를 더 잘게 나눈 정보
+export interface CellSplit {
+  row: number
+  col: number
+  subRows: number
+  subCols: number
+}
+
+export const CELL_SPLIT_MIN = 2
+export const CELL_SPLIT_MAX = 4
+export const CELL_SPLIT_DEFAULT = { subRows: 2, subCols: 2 }
 
 // 싱크대(주방 수납장) 디자인 프리셋 참조
 export interface CabinetDesign {
@@ -114,6 +129,8 @@ export interface StorageUnit {
   // wardrobe 전용: 여닫이문 옷장인지 서랍장 형태인지
   wardrobeStyle?: 'door' | 'drawer'
   baskets: Basket[]
+  // 특정 칸을 내부적으로 더 잘게 나눈 정보들
+  cellSplits: CellSplit[]
 }
 
 export const WARDROBE_STYLE_LABEL: Record<'door' | 'drawer', string> = {

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useHouseStore } from '../store'
 import {
+  CELL_SPLIT_DEFAULT,
+  CELL_SPLIT_MAX,
+  CELL_SPLIT_MIN,
   STORAGE_TYPE_LABEL,
   UNIT_GRID_MAX,
   UNIT_GRID_MIN,
@@ -8,6 +11,7 @@ import {
   UNIT_SIZE_MIN,
   UNIT_SIZE_SLIDER_MAX,
   WARDROBE_STYLE_LABEL,
+  type CellSplit,
   type Room,
   type StorageUnit,
 } from '../types'
@@ -36,6 +40,7 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
     resizeStorageUnit,
     setStorageUnitGrid,
     setWardrobeStyle,
+    splitCell,
   } = useHouseStore()
 
   const visual = getUnitVisual(unit)
@@ -166,13 +171,20 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
           <div className="shelf-grid" style={{ gridTemplateColumns: `repeat(${unit.cols}, minmax(180px, 1fr))` }}>
             {Array.from({ length: unit.rows }).map((_, r) =>
               Array.from({ length: unit.cols }).map((_, c) => {
-                const basket = unit.baskets.find((b) => b.row === r && b.col === c)
-                const emptyCells: { row: number; col: number }[] = []
-                if (unit.rows * unit.cols > 1) {
+                const split = unit.cellSplits.find((sp) => sp.row === r && sp.col === c)
+                const basket = !split
+                  ? unit.baskets.find((b) => b.row === r && b.col === c && b.subRow === undefined)
+                  : undefined
+                const emptyCells: { row: number; col: number; label: string }[] = []
+                if (!split && unit.rows * unit.cols > 1) {
                   for (let rr = 0; rr < unit.rows; rr++) {
                     for (let cc = 0; cc < unit.cols; cc++) {
-                      if (!(rr === r && cc === c) && !unit.baskets.some((b) => b.row === rr && b.col === cc)) {
-                        emptyCells.push({ row: rr, col: cc })
+                      if (unit.cellSplits.some((sp) => sp.row === rr && sp.col === cc)) continue
+                      if (
+                        !(rr === r && cc === c) &&
+                        !unit.baskets.some((b) => b.row === rr && b.col === cc && b.subRow === undefined)
+                      ) {
+                        emptyCells.push({ row: rr, col: cc, label: `${unit.rows - rr}층 · ${cc + 1}칸으로` })
                       }
                     }
                   }
@@ -184,7 +196,16 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
                         {unit.rows - r}층 · {c + 1}칸
                       </span>
                     )}
-                    {basket ? (
+                    {split ? (
+                      <SplitCellPanel
+                        room={room}
+                        unit={unit}
+                        row={r}
+                        col={c}
+                        split={split}
+                        highlightBasketId={highlightBasketId}
+                      />
+                    ) : basket ? (
                       <BasketPanel
                         roomId={room.id}
                         unitId={unit.id}
@@ -192,16 +213,20 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
                         name={basket.name}
                         items={basket.items}
                         emptyCells={emptyCells}
-                        totalRows={unit.rows}
                         highlighted={basket.id === highlightBasketId}
                         onRename={(name) => renameBasket(room.id, unit.id, basket.id, name)}
-                        onMove={(row, col) => moveBasketToCell(room.id, unit.id, basket.id, row, col)}
+                        onMove={(row, col, subRow, subCol) =>
+                          moveBasketToCell(room.id, unit.id, basket.id, row, col, subRow, subCol)
+                        }
                         onDelete={() => {
                           if (confirm(`'${basket.name}' 바구니를 삭제할까요?`)) deleteBasket(room.id, unit.id, basket.id)
                         }}
                       />
                     ) : (
-                      <EmptyCell onAdd={(name) => addBasket(room.id, unit.id, name, r, c)} />
+                      <EmptyCell
+                        onAdd={(name) => addBasket(room.id, unit.id, name, r, c)}
+                        onSplit={(subRows, subCols) => splitCell(room.id, unit.id, r, c, subRows, subCols)}
+                      />
                     )}
                   </div>
                 )
@@ -214,13 +239,60 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
   )
 }
 
-function EmptyCell({ onAdd }: { onAdd: (name: string) => void }) {
+function EmptyCell({
+  onAdd,
+  onSplit,
+}: {
+  onAdd: (name: string) => void
+  onSplit?: (subRows: number, subCols: number) => void
+}) {
   const [name, setName] = useState('')
+  const [splitting, setSplitting] = useState(false)
+  const [subRows, setSubRows] = useState(CELL_SPLIT_DEFAULT.subRows)
+  const [subCols, setSubCols] = useState(CELL_SPLIT_DEFAULT.subCols)
 
   function submit() {
     if (!name.trim()) return
     onAdd(name.trim())
     setName('')
+  }
+
+  if (splitting) {
+    return (
+      <div className="shelf-cell-empty shelf-cell-split-form">
+        <p className="hint small">이 칸 내부를 더 잘게 나눠서 칸마다 따로 정리해보세요.</p>
+        <div className="split-form-row">
+          <label>
+            세로
+            <input
+              type="number"
+              min={CELL_SPLIT_MIN}
+              max={CELL_SPLIT_MAX}
+              value={subRows}
+              onChange={(e) => setSubRows(Number(e.target.value) || CELL_SPLIT_MIN)}
+            />
+          </label>
+          <label>
+            가로
+            <input
+              type="number"
+              min={CELL_SPLIT_MIN}
+              max={CELL_SPLIT_MAX}
+              value={subCols}
+              onChange={(e) => setSubCols(Number(e.target.value) || CELL_SPLIT_MIN)}
+            />
+          </label>
+        </div>
+        <div className="split-form-actions">
+          <button className="btn btn-sm" onClick={() => setSplitting(false)}>
+            취소
+          </button>
+          <button className="btn btn-sm btn-primary" onClick={() => onSplit?.(subRows, subCols)}>
+            나누기
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -233,6 +305,96 @@ function EmptyCell({ onAdd }: { onAdd: (name: string) => void }) {
       />
       <button className="btn btn-sm" disabled={!name.trim()} onClick={submit}>
         + 바구니
+      </button>
+      {onSplit && (
+        <button className="btn btn-sm" onClick={() => setSplitting(true)} title="이 칸 내부를 더 잘게 나눠요">
+          ⛶ 칸 나누기
+        </button>
+      )}
+    </div>
+  )
+}
+
+function SplitCellPanel({
+  room,
+  unit,
+  row,
+  col,
+  split,
+  highlightBasketId,
+}: {
+  room: Room
+  unit: StorageUnit
+  row: number
+  col: number
+  split: CellSplit
+  highlightBasketId?: string | null
+}) {
+  const { addBasket, renameBasket, moveBasketToCell, deleteBasket, unsplitCell } = useHouseStore()
+  const baskets = unit.baskets.filter((b) => b.row === row && b.col === col && b.subRow !== undefined)
+  const hasAny = baskets.length > 0
+
+  return (
+    <div className="subcell-wrap">
+      <div
+        className="subcell-grid"
+        style={{ gridTemplateColumns: `repeat(${split.subCols}, minmax(96px, 1fr))` }}
+      >
+        {Array.from({ length: split.subRows }).map((_, sr) =>
+          Array.from({ length: split.subCols }).map((_, sc) => {
+            const subBasket = baskets.find((b) => b.subRow === sr && b.subCol === sc)
+            const siblingEmpty: { row: number; col: number; subRow: number; subCol: number; label: string }[] = []
+            if (split.subRows * split.subCols > 1) {
+              for (let rr = 0; rr < split.subRows; rr++) {
+                for (let cc = 0; cc < split.subCols; cc++) {
+                  if (!(rr === sr && cc === sc) && !baskets.some((b) => b.subRow === rr && b.subCol === cc)) {
+                    siblingEmpty.push({
+                      row,
+                      col,
+                      subRow: rr,
+                      subCol: cc,
+                      label: `안 ${split.subRows - rr}-${cc + 1}로`,
+                    })
+                  }
+                }
+              }
+            }
+            return (
+              <div className="subcell" key={`${sr}-${sc}`}>
+                <span className="subcell-label">
+                  안 {split.subRows - sr}-{sc + 1}
+                </span>
+                {subBasket ? (
+                  <BasketPanel
+                    roomId={room.id}
+                    unitId={unit.id}
+                    basketId={subBasket.id}
+                    name={subBasket.name}
+                    items={subBasket.items}
+                    emptyCells={siblingEmpty}
+                    highlighted={subBasket.id === highlightBasketId}
+                    compact
+                    onRename={(name) => renameBasket(room.id, unit.id, subBasket.id, name)}
+                    onMove={(r, c, subRow, subCol) => moveBasketToCell(room.id, unit.id, subBasket.id, r, c, subRow, subCol)}
+                    onDelete={() => {
+                      if (confirm(`'${subBasket.name}' 바구니를 삭제할까요?`)) deleteBasket(room.id, unit.id, subBasket.id)
+                    }}
+                  />
+                ) : (
+                  <EmptyCell onAdd={(name) => addBasket(room.id, unit.id, name, row, col, sr, sc)} />
+                )}
+              </div>
+            )
+          }),
+        )}
+      </div>
+      <button
+        className="btn btn-sm subcell-unsplit"
+        disabled={hasAny}
+        onClick={() => unsplitCell(room.id, unit.id, row, col)}
+        title={hasAny ? '안의 바구니를 모두 지우면 다시 합칠 수 있어요' : '나눈 칸을 다시 하나로 합쳐요'}
+      >
+        ⛶ 합치기
       </button>
     </div>
   )
@@ -271,6 +433,14 @@ function GridStepper({
   )
 }
 
+interface MoveTarget {
+  row: number
+  col: number
+  subRow?: number
+  subCol?: number
+  label: string
+}
+
 function BasketPanel({
   roomId,
   unitId,
@@ -278,8 +448,8 @@ function BasketPanel({
   name,
   items,
   emptyCells,
-  totalRows,
   highlighted,
+  compact,
   onRename,
   onMove,
   onDelete,
@@ -289,11 +459,11 @@ function BasketPanel({
   basketId: string
   name: string
   items: StorageUnit['baskets'][number]['items']
-  emptyCells: { row: number; col: number }[]
-  totalRows: number
+  emptyCells: MoveTarget[]
   highlighted: boolean
+  compact?: boolean
   onRename: (name: string) => void
-  onMove: (row: number, col: number) => void
+  onMove: (row: number, col: number, subRow?: number, subCol?: number) => void
   onDelete: () => void
 }) {
   const { addItem, deleteItem } = useHouseStore()
@@ -309,7 +479,7 @@ function BasketPanel({
   }
 
   return (
-    <div className={`basket-panel ${highlighted ? 'pulse-highlight' : ''}`}>
+    <div className={`basket-panel ${highlighted ? 'pulse-highlight' : ''} ${compact ? 'basket-panel-compact' : ''}`}>
       <div className="basket-panel-header">
         <span className="basket-icon">🧺</span>
         <input className="basket-name-input" value={name} onChange={(e) => onRename(e.target.value)} />
@@ -323,16 +493,16 @@ function BasketPanel({
           className="basket-move-select"
           value=""
           onChange={(e) => {
-            const [r, c] = e.target.value.split('-').map(Number)
-            onMove(r, c)
+            const target = emptyCells[Number(e.target.value)]
+            if (target) onMove(target.row, target.col, target.subRow, target.subCol)
           }}
         >
           <option value="" disabled>
             다른 칸으로 이동…
           </option>
-          {emptyCells.map(({ row, col }) => (
-            <option key={`${row}-${col}`} value={`${row}-${col}`}>
-              {totalRows - row}층 · {col + 1}칸으로
+          {emptyCells.map((target, idx) => (
+            <option key={idx} value={idx}>
+              {target.label}
             </option>
           ))}
         </select>

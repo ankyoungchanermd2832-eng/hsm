@@ -229,6 +229,19 @@
   cursor: grabbing;
 }
 
+/* 가구를 꾹 누르고 있는 동안 "곧 옮길 수 있어요"를 알려주는 링 - 1초에 걸쳐 서서히 채워진다 */
+.unit-tile.pressing {
+  transition: box-shadow 1s linear, transform 0.15s ease;
+  box-shadow: 0 0 0 3px var(--accent);
+  transform: translate(-50%, -50%) scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-tile.pressing {
+    transition: none;
+  }
+}
+
 .unit-tile-name {
   font-size: 0.68rem;
   color: #fff;

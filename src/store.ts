@@ -1,7 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Basket, House, Item, Room, RoomKind, SearchResult, StorageType, StorageUnit } from './types'
-import { UNIT_GRID_DEFAULT, UNIT_GRID_MAX, UNIT_GRID_MIN, UNIT_SIZE_DEFAULT, UNIT_SIZE_MIN } from './types'
+import type { Basket, CellSplit, House, Item, Room, RoomKind, SearchResult, StorageType, StorageUnit } from './types'
+import {
+  CELL_SPLIT_MAX,
+  CELL_SPLIT_MIN,
+  UNIT_GRID_DEFAULT,
+  UNIT_GRID_MAX,
+  UNIT_GRID_MIN,
+  UNIT_SIZE_DEFAULT,
+  UNIT_SIZE_MIN,
+} from './types'
 import { makeId } from './utils/id'
 
 // 최대 크기는 제한하지 않는다 - 찌그러지지 않도록 최소값만 지킨다.
@@ -16,6 +24,13 @@ function clampGrid(rows: number, cols: number) {
   return {
     rows: Math.max(UNIT_GRID_MIN, Math.min(UNIT_GRID_MAX, Math.round(rows) || UNIT_GRID_MIN)),
     cols: Math.max(UNIT_GRID_MIN, Math.min(UNIT_GRID_MAX, Math.round(cols) || UNIT_GRID_MIN)),
+  }
+}
+
+function clampSplitGrid(subRows: number, subCols: number) {
+  return {
+    subRows: Math.max(CELL_SPLIT_MIN, Math.min(CELL_SPLIT_MAX, Math.round(subRows) || CELL_SPLIT_MIN)),
+    subCols: Math.max(CELL_SPLIT_MIN, Math.min(CELL_SPLIT_MAX, Math.round(subCols) || CELL_SPLIT_MIN)),
   }
 }
 
@@ -37,11 +52,31 @@ interface HouseState {
   renameStorageUnit: (roomId: string, unitId: string, name: string) => void
   deleteStorageUnit: (roomId: string, unitId: string) => void
 
-  addBasket: (roomId: string, unitId: string, name: string, row: number, col: number) => string
+  addBasket: (
+    roomId: string,
+    unitId: string,
+    name: string,
+    row: number,
+    col: number,
+    subRow?: number,
+    subCol?: number,
+  ) => string
   renameBasket: (roomId: string, unitId: string, basketId: string, name: string) => void
-  moveBasketToCell: (roomId: string, unitId: string, basketId: string, row: number, col: number) => void
+  moveBasketToCell: (
+    roomId: string,
+    unitId: string,
+    basketId: string,
+    row: number,
+    col: number,
+    subRow?: number,
+    subCol?: number,
+  ) => void
   deleteBasket: (roomId: string, unitId: string, basketId: string) => void
   setWardrobeStyle: (roomId: string, unitId: string, style: 'door' | 'drawer') => void
+  // 가구의 특정 칸(row, col) 내부를 subRows x subCols 만큼 더 잘게 나눈다
+  splitCell: (roomId: string, unitId: string, row: number, col: number, subRows: number, subCols: number) => void
+  // 나눴던 칸을 다시 하나로 합친다 (안이 비어있을 때만 의미가 있다)
+  unsplitCell: (roomId: string, unitId: string, row: number, col: number) => void
 
   addItem: (
     roomId: string,
@@ -112,7 +147,14 @@ export const useHouseStore = create<HouseState>()(
                     ...r,
                     storageUnits: [
                       ...r.storageUnits,
-                      { ...UNIT_SIZE_DEFAULT, ...UNIT_GRID_DEFAULT, ...unit, id, baskets: [] } as StorageUnit,
+                      {
+                        ...UNIT_SIZE_DEFAULT,
+                        ...UNIT_GRID_DEFAULT,
+                        ...unit,
+                        id,
+                        baskets: [],
+                        cellSplits: [],
+                      } as StorageUnit,
                     ],
                   }
                 : r,
@@ -167,13 +209,21 @@ export const useHouseStore = create<HouseState>()(
                     storageUnits: r.storageUnits.map((u) => {
                       if (u.id !== unitId) return u
                       const grid = clampGrid(rows, cols)
+                      // 칸 수가 줄어들면 그 밖에 있던 나눈 칸 정보도 함께 정리한다
+                      const cellSplits = u.cellSplits.filter((sp) => sp.row < grid.rows && sp.col < grid.cols)
                       // 칸 수가 줄어들면 그 칸 밖에 있던 바구니를 범위 안으로 당겨온다
-                      const baskets = u.baskets.map((b) => ({
-                        ...b,
-                        row: Math.min(b.row, grid.rows - 1),
-                        col: Math.min(b.col, grid.cols - 1),
-                      }))
-                      return { ...u, ...grid, baskets }
+                      const baskets = u.baskets
+                        .map((b) => ({
+                          ...b,
+                          row: Math.min(b.row, grid.rows - 1),
+                          col: Math.min(b.col, grid.cols - 1),
+                        }))
+                        .map((b) =>
+                          b.subRow !== undefined && !cellSplits.some((sp) => sp.row === b.row && sp.col === b.col)
+                            ? { ...b, subRow: undefined, subCol: undefined }
+                            : b,
+                        )
+                      return { ...u, ...grid, baskets, cellSplits }
                     }),
                   }
                 : r,
@@ -210,9 +260,9 @@ export const useHouseStore = create<HouseState>()(
           },
         })),
 
-      addBasket: (roomId, unitId, name, row, col) => {
+      addBasket: (roomId, unitId, name, row, col, subRow, subCol) => {
         const id = makeId()
-        const basket: Basket = { id, name, row, col, items: [] }
+        const basket: Basket = { id, name, row, col, subRow, subCol, items: [] }
         set((s) => ({
           house: {
             ...s.house,
@@ -255,7 +305,7 @@ export const useHouseStore = create<HouseState>()(
           },
         })),
 
-      moveBasketToCell: (roomId, unitId, basketId, row, col) =>
+      moveBasketToCell: (roomId, unitId, basketId, row, col, subRow, subCol) =>
         set((s) => ({
           house: {
             ...s.house,
@@ -268,9 +318,49 @@ export const useHouseStore = create<HouseState>()(
                         ? {
                             ...u,
                             baskets: u.baskets.map((b) =>
-                              b.id === basketId ? { ...b, row, col } : b,
+                              b.id === basketId ? { ...b, row, col, subRow, subCol } : b,
                             ),
                           }
+                        : u,
+                    ),
+                  }
+                : r,
+            ),
+          },
+        })),
+
+      splitCell: (roomId, unitId, row, col, subRows, subCols) =>
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) => {
+                      if (u.id !== unitId) return u
+                      const grid = clampSplitGrid(subRows, subCols)
+                      const split: CellSplit = { row, col, ...grid }
+                      const cellSplits = [...u.cellSplits.filter((sp) => !(sp.row === row && sp.col === col)), split]
+                      return { ...u, cellSplits }
+                    }),
+                  }
+                : r,
+            ),
+          },
+        })),
+
+      unsplitCell: (roomId, unitId, row, col) =>
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) =>
+                      u.id === unitId
+                        ? { ...u, cellSplits: u.cellSplits.filter((sp) => !(sp.row === row && sp.col === col)) }
                         : u,
                     ),
                   }

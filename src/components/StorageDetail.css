@@ -207,6 +207,78 @@
   align-items: center;
 }
 
+.shelf-cell-split-form {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.split-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.split-form-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.split-form-row input {
+  width: 52px;
+}
+
+.split-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.subcell-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subcell-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.subcell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.subcell-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.subcell .shelf-cell-empty,
+.subcell .basket-panel-compact {
+  padding: 8px;
+}
+
+.basket-panel-compact .basket-name-input {
+  font-size: 0.85rem;
+}
+
+.subcell-unsplit {
+  align-self: flex-end;
+}
+
 .shelf-cell-empty input {
   flex: 1;
   min-width: 0;
@@ -217,10 +289,14 @@
   border-radius: 12px;
   padding: 12px;
   background: var(--panel);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .basket-move-select {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-bottom: 8px;
   font-size: 0.75rem;
   color: var(--muted);
@@ -231,6 +307,14 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
+}
+
+/* input/select 는 flex:1 이어도 기본 intrinsic width 때문에 좁은 칸(서브셀)에서 넘칠 수 있어
+   명시적으로 줄어들 수 있게 한다 */
+.basket-panel input,
+.basket-panel select {
+  min-width: 0;
 }
 
 .basket-icon {
