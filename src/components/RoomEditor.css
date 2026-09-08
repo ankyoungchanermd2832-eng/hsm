@@ -198,7 +198,11 @@
   transform: translate(-50%, -50%);
   cursor: grab;
   user-select: none;
-  touch-action: manipulation;
+  -webkit-user-select: none;
+  /* 길게 눌러서 옮기는 동안 iOS/Android 브라우저의 기본 "길게 누르기" 메뉴(복사/공유/새 탭에서 열기 등)가
+     끼어들어 화면이 이동하거나 팝업이 뜨는 걸 막는다 */
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
 /* 검색으로 찾아온 가구는 box-shadow 링(pulse-highlight)에 더해 살짝 커졌다 작아지며 눈에 띄게 한다 */

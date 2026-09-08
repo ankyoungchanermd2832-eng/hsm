@@ -283,6 +283,7 @@ function UnitTile({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
       onDoubleClick={onDoubleClick}
+      onContextMenu={(e) => e.preventDefault()}
       title="꾹 눌러서(약 1초) 위치 이동 · 더블클릭해서 내용 편집"
     >
       <IsoCube
