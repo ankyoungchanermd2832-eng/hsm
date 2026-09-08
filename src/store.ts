@@ -34,6 +34,29 @@ function clampSplitGrid(subRows: number, subCols: number) {
   }
 }
 
+// 저장된 데이터가 예전 버전(칸 나누기 기능 등이 없던 시절)에 만들어졌을 수 있어서,
+// 그때는 없던 필드가 비어 있어도 화면이 깨지지 않도록 기본값을 채워준다.
+// (localStorage 복원 시점과, 다른 기기와 동기화로 house를 통째로 받아올 때 모두 사용한다)
+function normalizeStorageUnit(u: StorageUnit): StorageUnit {
+  return {
+    ...UNIT_SIZE_DEFAULT,
+    ...UNIT_GRID_DEFAULT,
+    ...u,
+    baskets: u.baskets ?? [],
+    cellSplits: u.cellSplits ?? [],
+  }
+}
+
+function normalizeHouse(house: House): House {
+  return {
+    ...house,
+    rooms: (house.rooms ?? []).map((r) => ({
+      ...r,
+      storageUnits: (r.storageUnits ?? []).map(normalizeStorageUnit),
+    })),
+  }
+}
+
 interface HouseState {
   house: House
   setFloorPlanImage: (dataUrl: string | null) => void
@@ -511,9 +534,16 @@ export const useHouseStore = create<HouseState>()(
 
       resetHouse: () => set({ house: emptyHouse }),
 
-      hydrateHouse: (house) => set({ house }),
+      hydrateHouse: (house) => set({ house: normalizeHouse(house) }),
     }),
-    { name: 'home-storage-app' },
+    {
+      name: 'home-storage-app',
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<HouseState> | undefined
+        if (!persisted?.house) return { ...currentState, ...persisted }
+        return { ...currentState, ...persisted, house: normalizeHouse(persisted.house) }
+      },
+    },
   ),
 )
 
