@@ -115,6 +115,8 @@ interface HouseState {
   ) => string
   // 가구 사진 위에 놓인 바구니의 위치를 옮긴다
   moveBasketPosition: (roomId: string, unitId: string, basketId: string, x: number, y: number) => void
+  // 가구 사진 위에 놓인 바구니(단)의 사각형 크기를 조정한다
+  resizeBasketBox: (roomId: string, unitId: string, basketId: string, width: number, height: number) => void
 
   addItem: (
     roomId: string,
@@ -456,6 +458,30 @@ export const useHouseStore = create<HouseState>()(
                         ? {
                             ...u,
                             baskets: u.baskets.map((b) => (b.id === basketId ? { ...b, x, y } : b)),
+                          }
+                        : u,
+                    ),
+                  }
+                : r,
+            ),
+          },
+        })),
+
+      resizeBasketBox: (roomId, unitId, basketId, width, height) =>
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) =>
+                      u.id === unitId
+                        ? {
+                            ...u,
+                            baskets: u.baskets.map((b) =>
+                              b.id === basketId ? { ...b, width, height } : b,
+                            ),
                           }
                         : u,
                     ),

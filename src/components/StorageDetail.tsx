@@ -202,7 +202,7 @@ function PhotoTierEditor({
   unit: StorageUnit
   highlightBasketId?: string | null
 }) {
-  const { addPhotoBasket, moveBasketPosition, renameBasket, deleteBasket } = useHouseStore()
+  const { addPhotoBasket, moveBasketPosition, resizeBasketBox, renameBasket, deleteBasket } = useHouseStore()
   const photoRef = useRef<HTMLDivElement>(null)
   const [drawing, setDrawing] = useState(false)
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
@@ -220,6 +220,7 @@ function PhotoTierEditor({
     boxY: number
   } | null>(null)
   const [pressingBasketId, setPressingBasketId] = useState<string | null>(null)
+  const resizingRef = useRef<{ basketId: string; anchorX: number; anchorY: number } | null>(null)
 
   const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
   const openBasket = photoBaskets.find((b) => b.id === openBasketId) ?? null
@@ -338,6 +339,30 @@ function PhotoTierEditor({
     }
   }
 
+  // 상자 오른쪽 아래 손잡이를 끌면 위치는 그대로 두고 크기만 바뀐다 (꾹 누르기 없이 바로 시작).
+  function handleResizePointerDown(e: React.PointerEvent, basketId: string, anchorX: number, anchorY: number) {
+    e.stopPropagation()
+    e.preventDefault()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    resizingRef.current = { basketId, anchorX, anchorY }
+  }
+
+  function handleResizePointerMove(e: React.PointerEvent) {
+    const resizing = resizingRef.current
+    if (!resizing) return
+    e.stopPropagation()
+    const pos = relativePos(e.clientX, e.clientY)
+    const width = Math.max(4, Math.min(100 - resizing.anchorX, pos.x - resizing.anchorX))
+    const height = Math.max(4, Math.min(100 - resizing.anchorY, pos.y - resizing.anchorY))
+    resizeBasketBox(room.id, unit.id, resizing.basketId, width, height)
+  }
+
+  function handleResizePointerUp(e: React.PointerEvent) {
+    if (!resizingRef.current) return
+    e.stopPropagation()
+    resizingRef.current = null
+  }
+
   return (
     <div className="photo-tier-wrap">
       <div className="photo-tier-toolbar">
@@ -370,12 +395,21 @@ function PhotoTierEditor({
               onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
               onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
               onContextMenu={(e) => e.preventDefault()}
-              title="꾹 눌러서(약 1초) 위치 이동 · 탭해서 내용 편집"
+              title="꾹 눌러서(약 1초) 위치 이동 · 탭해서 내용 편집 · 모서리를 끌어 크기 조정"
             >
               <span className="photo-tier-box-label">
                 🧺 {b.name}
                 {b.items.length > 0 ? ` (${b.items.length})` : ''}
               </span>
+              <div
+                className="photo-tier-resize-handle"
+                onPointerDown={(e) => handleResizePointerDown(e, b.id, b.x ?? 0, b.y ?? 0)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                onClick={(e) => e.stopPropagation()}
+                title="드래그해서 크기 조정"
+              />
             </div>
           )
         })}
