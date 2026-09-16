@@ -481,6 +481,22 @@ function PhotoTierEditor({
         {drawing && <div className="placing-hint">사진에서 실제 서랍/선반 영역만큼 드래그하세요</div>}
       </div>
 
+      {photoBaskets.length > 0 && (
+        <div className="photo-tier-list">
+          {photoBaskets.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className={`photo-tier-chip ${b.id === highlightBasketId ? 'pulse-highlight' : ''}`}
+              onClick={() => setOpenBasketId(b.id)}
+            >
+              🧺 {b.name}
+              {b.items.length > 0 ? ` (${b.items.length})` : ''}
+            </button>
+          ))}
+        </div>
+      )}
+
       {openBasket && (
         <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
           <div
