@@ -153,11 +153,13 @@
 }
 
 /* 상자 오른쪽 아래 손잡이 - 꾹 눌러야(약 1초) 활성화되고, 그 뒤로 끌면
-   위치는 그대로 두고 크기만 바뀐다 */
+   위치는 그대로 두고 크기만 바뀐다. 상자 경계 밖으로 튀어나오면 바로 붙어있는
+   다른 단(서랍)의 탭 영역을 가로채서 그 단이 안 열리는 문제가 생기므로,
+   상자 안쪽에서만 자리하도록 한다. */
 .photo-tier-resize-handle {
   position: absolute;
-  right: -7px;
-  bottom: -7px;
+  right: 2px;
+  bottom: 2px;
   width: 18px;
   height: 18px;
   border-radius: 5px;
