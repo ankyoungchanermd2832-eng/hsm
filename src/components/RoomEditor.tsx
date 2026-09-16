@@ -83,7 +83,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
               onClick={() => newPhotoInputRef.current?.click()}
               disabled={photoProcessing}
             >
-              {photoProcessing ? '✨ 처리 중…' : '📷 새 가구 사진 찍기'}
+              {photoProcessing ? '✨ 처리 중…' : '📷 가구 사진 찍기'}
             </button>
             <button
               className="btn furniture-add-btn"

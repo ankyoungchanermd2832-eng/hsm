@@ -34,6 +34,13 @@ function clampSplitGrid(subRows: number, subCols: number) {
   }
 }
 
+// 예전 버전에서 '1단'/'1번'처럼 붙여서 만들어진 기본 이름을 숫자만 남도록 정리한다.
+// (사용자가 직접 이름을 바꿨다면 이 패턴과 다를 테니 그대로 둔다)
+function normalizeBasketName(name: string): string {
+  const match = /^(\d+)(단|번)$/.exec(name)
+  return match ? match[1] : name
+}
+
 // 저장된 데이터가 예전 버전(칸 나누기 기능 등이 없던 시절)에 만들어졌을 수 있어서,
 // 그때는 없던 필드가 비어 있어도 화면이 깨지지 않도록 기본값을 채워준다.
 // (localStorage 복원 시점과, 다른 기기와 동기화로 house를 통째로 받아올 때 모두 사용한다)
@@ -42,7 +49,7 @@ function normalizeStorageUnit(u: StorageUnit): StorageUnit {
     ...UNIT_SIZE_DEFAULT,
     ...UNIT_GRID_DEFAULT,
     ...u,
-    baskets: u.baskets ?? [],
+    baskets: (u.baskets ?? []).map((b) => ({ ...b, name: normalizeBasketName(b.name) })),
     cellSplits: u.cellSplits ?? [],
     photo: u.photo ?? null,
   }
