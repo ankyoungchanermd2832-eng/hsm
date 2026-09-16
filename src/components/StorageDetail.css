@@ -181,31 +181,6 @@
   }
 }
 
-/* 사진 위 사각형을 직접 누르기 어려울 때를 위해 아래에 단 목록을 따로 두어
-   항상 확실하게 각 단을 열 수 있게 한다 */
-.photo-tier-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.photo-tier-chip {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text-h);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.photo-tier-chip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .photo-basket-modal {
   width: min(420px, 92vw);
 }
