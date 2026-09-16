@@ -12,6 +12,7 @@ import {
 import { sortByName } from '../utils/sort'
 import { getUnitVisual } from '../utils/unitVisual'
 import { compressPhoto } from '../utils/compressImage'
+import { identifyItemPhoto } from '../utils/identifyItem'
 import './StorageDetail.css'
 
 const QUICK_ICONS = [
@@ -721,6 +722,7 @@ function BasketPanel({
   const [itemIcon, setItemIcon] = useState('📦')
   const [itemPhoto, setItemPhoto] = useState<string | null>(null)
   const [itemPhotoProcessing, setItemPhotoProcessing] = useState(false)
+  const [itemNameSuggesting, setItemNameSuggesting] = useState(false)
   const [itemMode, setItemMode] = useState<'photo' | 'icon'>('photo')
   const itemPhotoInputRef = useRef<HTMLInputElement>(null)
 
@@ -740,12 +742,22 @@ function BasketPanel({
     e.target.value = ''
     if (!file) return
     setItemPhotoProcessing(true)
+    let compressed: string | null = null
     try {
-      setItemPhoto(await compressPhoto(file))
+      compressed = await compressPhoto(file)
+      setItemPhoto(compressed)
     } catch (err) {
       console.error('물건 사진을 처리하지 못했어요.', err)
     }
     setItemPhotoProcessing(false)
+
+    // 이름을 아직 안 적었을 때만 사진을 보고 이름을 추정해 미리 채워준다 (직접 적은 이름은 덮어쓰지 않는다).
+    if (compressed && !itemName.trim()) {
+      setItemNameSuggesting(true)
+      const suggested = await identifyItemPhoto(compressed)
+      if (suggested) setItemName(suggested)
+      setItemNameSuggesting(false)
+    }
   }
 
   return (
@@ -841,7 +853,7 @@ function BasketPanel({
         <div className="item-name-row">
           <input
             className="item-name-input"
-            placeholder="물건 이름을 입력하세요"
+            placeholder={itemNameSuggesting ? '🔍 사진으로 이름 추정 중…' : '물건 이름을 입력하세요'}
             value={itemName}
             onChange={(e) => setItemName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submitItem()}
