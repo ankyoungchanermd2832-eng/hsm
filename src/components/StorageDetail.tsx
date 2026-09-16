@@ -26,6 +26,10 @@ const QUICK_ICONS = [
 // 바구니(단)를 옮기려면 이만큼(ms) 눌러야 드래그가 시작된다 - 방의 가구 이동과 같은 규칙.
 const LONG_PRESS_MS = 1000
 const PRESS_MOVE_CANCEL_PX = 8
+// 사진 위 상자를 탭해서 편집창을 연 직후, 손가락을 뗄 때 브라우저가 뒤늦게 만들어내는
+// "유령 클릭"이 그 자리에 새로 나타난 편집창 버튼(사진/이모티콘 버튼 등)에 떨어져서
+// 누르지도 않았는데 저절로 눌리는 문제를 막기 위한 대기 시간.
+const GHOST_CLICK_GUARD_MS = 400
 
 interface StorageDetailProps {
   room: Room
@@ -209,6 +213,7 @@ function PhotoTierEditor({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
   const [draftRect, setDraftRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
   const [openBasketId, setOpenBasketId] = useState<string | null>(null)
+  const openedAtRef = useRef(0)
 
   const draggingRef = useRef<{ basketId: string; offsetX: number; offsetY: number } | null>(null)
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -346,6 +351,7 @@ function PhotoTierEditor({
     if (wasDragging) return
 
     if (wasCleanPress) {
+      openedAtRef.current = Date.now()
       setOpenBasketId(basketId)
     }
   }
@@ -474,7 +480,16 @@ function PhotoTierEditor({
 
       {openBasket && (
         <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
-          <div className="modal-card photo-basket-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-card photo-basket-modal"
+            onClick={(e) => e.stopPropagation()}
+            onClickCapture={(e) => {
+              if (Date.now() - openedAtRef.current < GHOST_CLICK_GUARD_MS) {
+                e.preventDefault()
+                e.stopPropagation()
+              }
+            }}
+          >
             <BasketPanel
               key={openBasket.id}
               roomId={room.id}
