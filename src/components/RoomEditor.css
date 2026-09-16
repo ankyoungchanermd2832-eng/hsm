@@ -69,8 +69,13 @@
   gap: 16px;
 }
 
+.furniture-add-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .furniture-add-btn {
-  align-self: flex-start;
   font-size: 0.95rem;
   padding: 12px 20px;
 }

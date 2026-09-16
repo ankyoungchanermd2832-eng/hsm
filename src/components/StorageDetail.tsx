@@ -624,13 +624,30 @@ function BasketPanel({
   const { addItem, deleteItem } = useHouseStore()
   const [itemName, setItemName] = useState('')
   const [itemIcon, setItemIcon] = useState('📦')
+  const [itemPhoto, setItemPhoto] = useState<string | null>(null)
+  const [itemPhotoProcessing, setItemPhotoProcessing] = useState(false)
+  const itemPhotoInputRef = useRef<HTMLInputElement>(null)
 
   const sortedItems = sortByName(items)
 
   function submitItem() {
     if (!itemName.trim()) return
-    addItem(roomId, unitId, basketId, { name: itemName.trim(), icon: itemIcon })
+    addItem(roomId, unitId, basketId, { name: itemName.trim(), icon: itemIcon, photo: itemPhoto })
     setItemName('')
+    setItemPhoto(null)
+  }
+
+  async function handleItemPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setItemPhotoProcessing(true)
+    try {
+      setItemPhoto(await compressPhoto(file))
+    } catch (err) {
+      console.error('물건 사진을 처리하지 못했어요.', err)
+    }
+    setItemPhotoProcessing(false)
   }
 
   return (
@@ -669,7 +686,11 @@ function BasketPanel({
         <ul className="item-grid">
           {sortedItems.map((item) => (
             <li key={item.id} className="item-chip">
-              <span className="item-icon">{item.icon}</span>
+              {item.photo ? (
+                <img src={item.photo} alt="" className="item-photo-thumb" />
+              ) : (
+                <span className="item-icon">{item.icon}</span>
+              )}
               <span className="item-name">{item.name}</span>
               <button
                 className="item-remove"
@@ -684,13 +705,43 @@ function BasketPanel({
       )}
 
       <div className="item-add-row">
-        <select value={itemIcon} onChange={(e) => setItemIcon(e.target.value)} className="icon-select">
-          {QUICK_ICONS.map((icon) => (
-            <option key={icon} value={icon}>
-              {icon}
-            </option>
-          ))}
-        </select>
+        <input
+          ref={itemPhotoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={handleItemPhoto}
+        />
+        <button
+          type="button"
+          className="item-photo-btn"
+          onClick={() => itemPhotoInputRef.current?.click()}
+          disabled={itemPhotoProcessing}
+          title="물건 사진 찍기"
+        >
+          {itemPhotoProcessing ? (
+            '✨'
+          ) : itemPhoto ? (
+            <img src={itemPhoto} alt="" className="item-photo-btn-preview" />
+          ) : (
+            <span className="item-icon">{itemIcon}</span>
+          )}
+        </button>
+        {!itemPhoto && (
+          <select value={itemIcon} onChange={(e) => setItemIcon(e.target.value)} className="icon-select">
+            {QUICK_ICONS.map((icon) => (
+              <option key={icon} value={icon}>
+                {icon}
+              </option>
+            ))}
+          </select>
+        )}
+        {itemPhoto && (
+          <button type="button" className="item-photo-clear" onClick={() => setItemPhoto(null)} title="사진 지우기">
+            ✕
+          </button>
+        )}
         <input
           placeholder="물건 이름 입력 후 Enter"
           value={itemName}

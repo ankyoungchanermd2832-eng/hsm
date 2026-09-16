@@ -15,6 +15,7 @@ interface RoomEditorProps {
 export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }: RoomEditorProps) {
   const { addStorageUnit, setStorageUnitPhoto, deleteStorageUnit, updateRoom } = useHouseStore()
   const newPhotoInputRef = useRef<HTMLInputElement>(null)
+  const importPhotoInputRef = useRef<HTMLInputElement>(null)
 
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
@@ -78,13 +79,23 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
             hidden
             onChange={handleNewFurniturePhoto}
           />
-          <button
-            className="btn btn-primary furniture-add-btn"
-            onClick={() => newPhotoInputRef.current?.click()}
-            disabled={photoProcessing}
-          >
-            {photoProcessing ? '✨ 처리 중…' : '📷 새 가구 사진 찍기'}
-          </button>
+          <input ref={importPhotoInputRef} type="file" accept="image/*" hidden onChange={handleNewFurniturePhoto} />
+          <div className="furniture-add-row">
+            <button
+              className="btn btn-primary furniture-add-btn"
+              onClick={() => newPhotoInputRef.current?.click()}
+              disabled={photoProcessing}
+            >
+              {photoProcessing ? '✨ 처리 중…' : '📷 새 가구 사진 찍기'}
+            </button>
+            <button
+              className="btn furniture-add-btn"
+              onClick={() => importPhotoInputRef.current?.click()}
+              disabled={photoProcessing}
+            >
+              🖼️ 가구 사진 가져오기
+            </button>
+          </div>
 
           <div className="furniture-gallery">
             {room.storageUnits.length === 0 ? (

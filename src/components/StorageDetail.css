@@ -373,6 +373,14 @@
   font-size: 1rem;
 }
 
+.item-photo-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .item-remove {
   border: none;
   background: transparent;
@@ -400,6 +408,41 @@
   width: 56px;
   text-align: center;
   font-size: 1rem;
+}
+
+.item-photo-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.item-photo-btn-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-photo-clear {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.item-photo-clear:hover {
+  color: #e0475a;
 }
 
 .hint.small {

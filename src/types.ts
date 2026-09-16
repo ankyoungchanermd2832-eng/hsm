@@ -52,6 +52,7 @@ export interface Item {
   id: string
   name: string
   icon: string // 이모지 아이콘
+  photo?: string | null // 물건을 찍은 사진 - 있으면 아이콘 대신 사진을 보여준다
   memo?: string
   quantity?: number
 }

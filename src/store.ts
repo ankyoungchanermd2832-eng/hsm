@@ -120,7 +120,7 @@ interface HouseState {
     roomId: string,
     unitId: string,
     basketId: string,
-    item: { name: string; icon: string; memo?: string; quantity?: number },
+    item: { name: string; icon: string; photo?: string | null; memo?: string; quantity?: number },
   ) => string
   updateItem: (
     roomId: string,
