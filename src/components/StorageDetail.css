@@ -212,6 +212,13 @@
   width: 100%;
 }
 
+/* 닫기 버튼 아래로 옮겨진 담긴 물건 목록 */
+.photo-basket-modal > .item-grid {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .shelf-grid-wrap {
   margin-top: 16px;
 }

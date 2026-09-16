@@ -454,6 +454,7 @@ function PhotoTierEditor({
               items={openBasket.items}
               emptyCells={[]}
               highlighted={false}
+              showItemList={false}
               onRename={(name) => renameBasket(room.id, unit.id, openBasket.id, name)}
               onMove={() => {}}
               onDelete={() => {
@@ -466,6 +467,7 @@ function PhotoTierEditor({
             <button className="btn" onClick={() => setOpenBasketId(null)}>
               닫기 ✕
             </button>
+            <ItemList roomId={room.id} unitId={unit.id} basketId={openBasket.id} items={openBasket.items} />
           </div>
         </div>
       )}
@@ -651,6 +653,7 @@ function BasketPanel({
   emptyCells,
   highlighted,
   compact,
+  showItemList = true,
   onRename,
   onMove,
   onDelete,
@@ -663,19 +666,18 @@ function BasketPanel({
   emptyCells: MoveTarget[]
   highlighted: boolean
   compact?: boolean
+  showItemList?: boolean
   onRename: (name: string) => void
   onMove: (row: number, col: number, subRow?: number, subCol?: number) => void
   onDelete: () => void
 }) {
-  const { addItem, deleteItem } = useHouseStore()
+  const { addItem } = useHouseStore()
   const [itemName, setItemName] = useState('')
   const [itemIcon, setItemIcon] = useState('📦')
   const [itemPhoto, setItemPhoto] = useState<string | null>(null)
   const [itemPhotoProcessing, setItemPhotoProcessing] = useState(false)
   const [itemMode, setItemMode] = useState<'photo' | 'icon'>('photo')
   const itemPhotoInputRef = useRef<HTMLInputElement>(null)
-
-  const sortedItems = sortByName(items)
 
   function submitItem() {
     if (!itemName.trim()) return
@@ -731,27 +733,7 @@ function BasketPanel({
         </select>
       )}
 
-      {sortedItems.length > 0 && (
-        <ul className="item-grid">
-          {sortedItems.map((item) => (
-            <li key={item.id} className="item-chip">
-              {item.photo ? (
-                <img src={item.photo} alt="" className="item-photo-thumb" />
-              ) : (
-                <span className="item-icon">{item.icon}</span>
-              )}
-              <span className="item-name">{item.name}</span>
-              <button
-                className="item-remove"
-                onClick={() => deleteItem(roomId, unitId, basketId, item.id)}
-                title="삭제"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {showItemList && <ItemList roomId={roomId} unitId={unitId} basketId={basketId} items={items} />}
 
       <div className="item-add-row">
         <input
@@ -825,5 +807,40 @@ function BasketPanel({
         </div>
       </div>
     </div>
+  )
+}
+
+function ItemList({
+  roomId,
+  unitId,
+  basketId,
+  items,
+}: {
+  roomId: string
+  unitId: string
+  basketId: string
+  items: StorageUnit['baskets'][number]['items']
+}) {
+  const { deleteItem } = useHouseStore()
+  const sortedItems = sortByName(items)
+
+  if (sortedItems.length === 0) return null
+
+  return (
+    <ul className="item-grid">
+      {sortedItems.map((item) => (
+        <li key={item.id} className="item-chip">
+          {item.photo ? (
+            <img src={item.photo} alt="" className="item-photo-thumb" />
+          ) : (
+            <span className="item-icon">{item.icon}</span>
+          )}
+          <span className="item-name">{item.name}</span>
+          <button className="item-remove" onClick={() => deleteItem(roomId, unitId, basketId, item.id)} title="삭제">
+            ✕
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
