@@ -4,7 +4,6 @@ import {
   CELL_SPLIT_DEFAULT,
   CELL_SPLIT_MAX,
   CELL_SPLIT_MIN,
-  STORAGE_TYPE_LABEL,
   type CellSplit,
   type Room,
   type StorageUnit,
@@ -78,7 +77,6 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
               value={unit.name}
               onChange={(e) => renameStorageUnit(room.id, unit.id, e.target.value)}
             />
-            <span className="unit-type-badge">{STORAGE_TYPE_LABEL[unit.type]}</span>
           </div>
           <div className="storage-detail-actions">
             <button
@@ -413,7 +411,7 @@ function PhotoTierEditor({
     <div className="photo-tier-wrap">
       <div className="photo-tier-toolbar">
         <button className={`btn btn-sm ${drawing ? 'btn-active' : ''}`} onClick={() => setDrawing((v) => !v)}>
-          {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 단 추가'}
+          {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 보관함 추가'}
         </button>
         <span className="hint small">🧺 표시된 영역을 탭하면 안의 물건을 편집할 수 있어요.</span>
       </div>

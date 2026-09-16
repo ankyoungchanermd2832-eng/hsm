@@ -42,17 +42,6 @@
   background: var(--panel);
 }
 
-.unit-type-badge {
-  font-size: 0.72rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--muted);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 .storage-detail-actions {
   display: flex;
   gap: 8px;
