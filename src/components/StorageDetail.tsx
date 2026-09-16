@@ -335,17 +335,10 @@ function PhotoTierEditor({
     }, LONG_PRESS_MS)
   }
 
-  function handleMarkerPointerMove(e: React.PointerEvent) {
-    const pending = pendingPressRef.current
-    if (!pending || pending.pointerId !== e.pointerId || draggingRef.current) return
-    const dx = e.clientX - pending.startX
-    const dy = e.clientY - pending.startY
-    if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
-      cancelPendingPress()
-    }
-  }
-
   // 꾹 누르면(약 1초) 옮기고, 짧게 한 번 탭하면 바로 편집창이 열린다.
+  // 짧게 눌렀다 떼는 동안 손가락이 살짝 흔들려도(터치스크린에서는 흔한 일이다) 탭이
+  // 무효 처리되지 않도록, 1초가 지나기 전까지는 움직임을 이유로 취소하지 않는다 -
+  // 실제로 상자를 옮기려면 어차피 1초를 꽉 채워 눌러야만 시작되기 때문에 안전하다.
   function handleMarkerPointerUp(e: React.PointerEvent, basketId: string) {
     const pending = pendingPressRef.current
     const wasCleanPress = pending?.pointerId === e.pointerId && pending.basketId === basketId
@@ -445,7 +438,6 @@ function PhotoTierEditor({
               }`}
               style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${width}%`, height: `${height}%` }}
               onPointerDown={(e) => handleMarkerPointerDown(e, b.id, b.x ?? 0, b.y ?? 0)}
-              onPointerMove={handleMarkerPointerMove}
               onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
               onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
               onContextMenu={(e) => e.preventDefault()}
