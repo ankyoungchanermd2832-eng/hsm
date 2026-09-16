@@ -1,0 +1,17 @@
+{
+  "name": "우리집 수납정리",
+  "short_name": "수납정리",
+  "description": "집 도면을 등록하고 방마다 수납공간을 배치한 뒤, 넣어둔 물건을 검색해서 찾는 앱",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#faf9f7",
+  "theme_color": "#d97b3f",
+  "lang": "ko",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
