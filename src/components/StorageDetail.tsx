@@ -276,7 +276,7 @@ function PhotoTierEditor({
         addPhotoBasket(
           room.id,
           unit.id,
-          `${photoBaskets.length + 1}단`,
+          `${photoBaskets.length + 1}`,
           draftRect.x,
           draftRect.y,
           draftRect.width,
