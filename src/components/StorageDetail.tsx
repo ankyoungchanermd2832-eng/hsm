@@ -433,10 +433,20 @@ function PhotoTierEditor({
           return (
             <div
               key={b.id}
+              data-basket-id={b.id}
               className={`photo-tier-box ${pressingBasketId === b.id ? 'pressing' : ''} ${
                 b.id === highlightBasketId ? 'pulse-highlight' : ''
               }`}
-              style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${width}%`, height: `${height}%` }}
+              // 사각형끼리 겹칠 때, 더 작게(더 정확하게) 그린 쪽이 항상 위로 오게 해서
+              // 큰 사각형에 완전히 덮여도 탭할 수 있게 한다. (편집창의 z-index:100보다는
+              // 항상 낮게 유지해서 열려있는 편집창을 가리지 않도록 범위를 좁게 잡는다)
+              style={{
+                left: `${b.x}%`,
+                top: `${b.y}%`,
+                width: `${width}%`,
+                height: `${height}%`,
+                zIndex: Math.round((10000 - width * height) / 250),
+              }}
               onPointerDown={(e) => handleMarkerPointerDown(e, b.id, b.x ?? 0, b.y ?? 0)}
               onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
               onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
@@ -472,22 +482,6 @@ function PhotoTierEditor({
         )}
         {drawing && <div className="placing-hint">사진에서 실제 서랍/선반 영역만큼 드래그하세요</div>}
       </div>
-
-      {photoBaskets.length > 0 && (
-        <div className="photo-tier-list">
-          {photoBaskets.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`photo-tier-chip ${b.id === highlightBasketId ? 'pulse-highlight' : ''}`}
-              onClick={() => setOpenBasketId(b.id)}
-            >
-              🧺 {b.name}
-              {b.items.length > 0 ? ` (${b.items.length})` : ''}
-            </button>
-          ))}
-        </div>
-      )}
 
       {openBasket && (
         <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
