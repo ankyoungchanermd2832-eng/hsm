@@ -157,7 +157,8 @@
   text-overflow: ellipsis;
 }
 
-/* 상자 오른쪽 아래 손잡이 - 끌면 위치는 그대로 두고 크기만 바뀐다 */
+/* 상자 오른쪽 아래 손잡이 - 꾹 눌러야(약 1초) 활성화되고, 그 뒤로 끌면
+   위치는 그대로 두고 크기만 바뀐다 */
 .photo-tier-resize-handle {
   position: absolute;
   right: -7px;
@@ -171,6 +172,18 @@
   cursor: nwse-resize;
   touch-action: none;
   -webkit-touch-callout: none;
+  transition: transform 0.15s ease, box-shadow 1s linear;
+}
+
+.photo-tier-resize-handle.armed {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 3px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-tier-resize-handle {
+    transition: none;
+  }
 }
 
 /* 사진 위 사각형을 직접 누르기 어려울 때를 위해 아래에 단 목록을 따로 두어

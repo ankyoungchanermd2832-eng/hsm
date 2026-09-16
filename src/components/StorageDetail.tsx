@@ -221,6 +221,16 @@ function PhotoTierEditor({
   } | null>(null)
   const [pressingBasketId, setPressingBasketId] = useState<string | null>(null)
   const resizingRef = useRef<{ basketId: string; anchorX: number; anchorY: number } | null>(null)
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingResizeRef = useRef<{
+    basketId: string
+    pointerId: number
+    anchorX: number
+    anchorY: number
+    startX: number
+    startY: number
+  } | null>(null)
+  const [resizeArmedBasketId, setResizeArmedBasketId] = useState<string | null>(null)
 
   const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
   const openBasket = photoBaskets.find((b) => b.id === openBasketId) ?? null
@@ -339,28 +349,62 @@ function PhotoTierEditor({
     }
   }
 
-  // 상자 오른쪽 아래 손잡이를 끌면 위치는 그대로 두고 크기만 바뀐다 (꾹 누르기 없이 바로 시작).
+  function cancelPendingResize() {
+    if (resizeTimerRef.current) {
+      clearTimeout(resizeTimerRef.current)
+      resizeTimerRef.current = null
+    }
+    pendingResizeRef.current = null
+    setResizeArmedBasketId(null)
+  }
+
+  // 상자 오른쪽 아래 손잡이도 꾹 눌러야(약 1초) 크기 조정이 활성화된다 - 상자 이동과 같은 규칙.
+  // 그래야 사진을 살짝 스치듯 탭했을 때 실수로 크기가 바뀌지 않는다.
   function handleResizePointerDown(e: React.PointerEvent, basketId: string, anchorX: number, anchorY: number) {
     e.stopPropagation()
     e.preventDefault()
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    resizingRef.current = { basketId, anchorX, anchorY }
+    const pointerId = e.pointerId
+    ;(e.target as HTMLElement).setPointerCapture(pointerId)
+    pendingResizeRef.current = { basketId, pointerId, anchorX, anchorY, startX: e.clientX, startY: e.clientY }
+    setResizeArmedBasketId(basketId)
+    if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
+    resizeTimerRef.current = setTimeout(() => {
+      resizeTimerRef.current = null
+      const pending = pendingResizeRef.current
+      if (pending?.basketId === basketId && pending.pointerId === pointerId) {
+        resizingRef.current = { basketId, anchorX: pending.anchorX, anchorY: pending.anchorY }
+        pendingResizeRef.current = null
+      }
+    }, LONG_PRESS_MS)
   }
 
   function handleResizePointerMove(e: React.PointerEvent) {
     const resizing = resizingRef.current
-    if (!resizing) return
-    e.stopPropagation()
-    const pos = relativePos(e.clientX, e.clientY)
-    const width = Math.max(4, Math.min(100 - resizing.anchorX, pos.x - resizing.anchorX))
-    const height = Math.max(4, Math.min(100 - resizing.anchorY, pos.y - resizing.anchorY))
-    resizeBasketBox(room.id, unit.id, resizing.basketId, width, height)
+    if (resizing) {
+      e.stopPropagation()
+      const pos = relativePos(e.clientX, e.clientY)
+      const width = Math.max(4, Math.min(100 - resizing.anchorX, pos.x - resizing.anchorX))
+      const height = Math.max(4, Math.min(100 - resizing.anchorY, pos.y - resizing.anchorY))
+      resizeBasketBox(room.id, unit.id, resizing.basketId, width, height)
+      return
+    }
+    const pending = pendingResizeRef.current
+    if (!pending || pending.pointerId !== e.pointerId) return
+    const dx = e.clientX - pending.startX
+    const dy = e.clientY - pending.startY
+    if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
+      cancelPendingResize()
+    }
   }
 
   function handleResizePointerUp(e: React.PointerEvent) {
-    if (!resizingRef.current) return
-    e.stopPropagation()
-    resizingRef.current = null
+    if (resizingRef.current) {
+      e.stopPropagation()
+      resizingRef.current = null
+      setResizeArmedBasketId(null)
+      return
+    }
+    cancelPendingResize()
   }
 
   return (
@@ -402,13 +446,13 @@ function PhotoTierEditor({
                 {b.items.length > 0 ? ` (${b.items.length})` : ''}
               </span>
               <div
-                className="photo-tier-resize-handle"
+                className={`photo-tier-resize-handle ${resizeArmedBasketId === b.id ? 'armed' : ''}`}
                 onPointerDown={(e) => handleResizePointerDown(e, b.id, b.x ?? 0, b.y ?? 0)}
                 onPointerMove={handleResizePointerMove}
                 onPointerUp={handleResizePointerUp}
                 onPointerCancel={handleResizePointerUp}
                 onClick={(e) => e.stopPropagation()}
-                title="드래그해서 크기 조정"
+                title="꾹 눌러서(약 1초) 크기 조정 활성화"
               />
             </div>
           )
