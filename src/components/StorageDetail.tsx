@@ -14,7 +14,14 @@ import { getUnitVisual } from '../utils/unitVisual'
 import { compressPhoto } from '../utils/compressImage'
 import './StorageDetail.css'
 
-const QUICK_ICONS = ['📦', '👕', '📚', '🍳', '💊', '🧸', '🔌', '🧴', '📄', '🧦', '🧣', '🎁', '🛠️', '🧵']
+const QUICK_ICONS = [
+  '📦', '👕', '👖', '👗', '🧥', '👟', '👜', '🎒',
+  '📚', '📄', '✏️',
+  '🍳', '🍽️', '☕', '🧊', '🧴', '🧼', '🧻', '🧹',
+  '💊', '🩹', '🧸', '🎮', '📱', '💻', '🔌', '🔋', '🎧',
+  '🔧', '🪛', '🔩', '🧵', '🧶',
+  '💍', '👓', '🧢', '⚽', '🎁', '🕯️', '🖼️', '🔑', '💳',
+]
 
 // 바구니(단)를 옮기려면 이만큼(ms) 눌러야 드래그가 시작된다 - 방의 가구 이동과 같은 규칙.
 const LONG_PRESS_MS = 1000
@@ -725,9 +732,13 @@ function BasketPanel({
           <button
             type="button"
             className={`item-mode-btn ${itemMode === 'photo' ? 'active' : ''}`}
-            onClick={() => setItemMode('photo')}
+            onClick={() => {
+              setItemMode('photo')
+              itemPhotoInputRef.current?.click()
+            }}
+            disabled={itemPhotoProcessing}
           >
-            📷 사진으로 담기
+            {itemPhotoProcessing ? '✨ 처리 중…' : itemPhoto ? '📷 다시 찍기' : '📷 사진으로 담기'}
           </button>
           <button
             type="button"
@@ -741,25 +752,17 @@ function BasketPanel({
           </button>
         </div>
 
-        {itemMode === 'photo' ? (
-          <div className="item-capture-row">
-            <button
-              type="button"
-              className="item-photo-btn"
-              onClick={() => itemPhotoInputRef.current?.click()}
-              disabled={itemPhotoProcessing}
-              title="물건 사진 찍기"
-            >
-              {itemPhotoProcessing ? '✨' : itemPhoto ? <img src={itemPhoto} alt="" className="item-photo-btn-preview" /> : '📷'}
+        {itemMode === 'photo' && itemPhoto && (
+          <div className="item-photo-preview-row">
+            <img src={itemPhoto} alt="" className="item-photo-preview-thumb" />
+            <span className="hint small">사진이 담겼어요</span>
+            <button type="button" className="item-photo-clear" onClick={() => setItemPhoto(null)} title="사진 지우기">
+              ✕ 지우기
             </button>
-            <span className="hint small">{itemPhoto ? '사진이 담겼어요' : '눌러서 물건 사진을 찍어보세요'}</span>
-            {itemPhoto && (
-              <button type="button" className="item-photo-clear" onClick={() => setItemPhoto(null)} title="사진 지우기">
-                ✕
-              </button>
-            )}
           </div>
-        ) : (
+        )}
+
+        {itemMode === 'icon' && (
           <div className="icon-picker">
             {QUICK_ICONS.map((icon) => (
               <button

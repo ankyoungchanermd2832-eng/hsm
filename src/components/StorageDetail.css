@@ -438,8 +438,8 @@
   background: var(--bg);
   color: var(--muted);
   border-radius: 999px;
-  padding: 7px 10px;
-  font-size: 0.78rem;
+  padding: 11px 14px;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -450,31 +450,17 @@
   color: var(--accent);
 }
 
-.item-capture-row {
+.item-photo-preview-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.item-photo-btn {
-  width: 48px;
-  height: 48px;
+.item-photo-preview-thumb {
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
-  border: 1.5px dashed var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  overflow: hidden;
-  font-size: 1.3rem;
-}
-
-.item-photo-btn-preview {
-  width: 100%;
-  height: 100%;
+  border-radius: 8px;
   object-fit: cover;
 }
 
