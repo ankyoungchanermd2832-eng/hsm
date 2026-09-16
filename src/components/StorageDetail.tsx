@@ -386,6 +386,22 @@ function PhotoTierEditor({
         {drawing && <div className="placing-hint">사진에서 실제 서랍/선반 영역만큼 드래그하세요</div>}
       </div>
 
+      {photoBaskets.length > 0 && (
+        <div className="photo-tier-list">
+          {photoBaskets.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className={`photo-tier-chip ${b.id === highlightBasketId ? 'pulse-highlight' : ''}`}
+              onClick={() => setOpenBasketId(b.id)}
+            >
+              🧺 {b.name}
+              {b.items.length > 0 ? ` (${b.items.length})` : ''}
+            </button>
+          ))}
+        </div>
+      )}
+
       {openBasket && (
         <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
           <div className="modal-card photo-basket-modal" onClick={(e) => e.stopPropagation()}>
@@ -615,13 +631,18 @@ function BasketPanel({
   const [itemIcon, setItemIcon] = useState('📦')
   const [itemPhoto, setItemPhoto] = useState<string | null>(null)
   const [itemPhotoProcessing, setItemPhotoProcessing] = useState(false)
+  const [itemMode, setItemMode] = useState<'photo' | 'icon'>('photo')
   const itemPhotoInputRef = useRef<HTMLInputElement>(null)
 
   const sortedItems = sortByName(items)
 
   function submitItem() {
     if (!itemName.trim()) return
-    addItem(roomId, unitId, basketId, { name: itemName.trim(), icon: itemIcon, photo: itemPhoto })
+    addItem(roomId, unitId, basketId, {
+      name: itemName.trim(),
+      icon: itemIcon,
+      photo: itemMode === 'photo' ? itemPhoto : null,
+    })
     setItemName('')
     setItemPhoto(null)
   }
@@ -669,9 +690,7 @@ function BasketPanel({
         </select>
       )}
 
-      {sortedItems.length === 0 ? (
-        <p className="hint small">비어있는 바구니예요.</p>
-      ) : (
+      {sortedItems.length > 0 && (
         <ul className="item-grid">
           {sortedItems.map((item) => (
             <li key={item.id} className="item-chip">
@@ -702,44 +721,71 @@ function BasketPanel({
           hidden
           onChange={handleItemPhoto}
         />
-        <button
-          type="button"
-          className="item-photo-btn"
-          onClick={() => itemPhotoInputRef.current?.click()}
-          disabled={itemPhotoProcessing}
-          title="물건 사진 찍기"
-        >
-          {itemPhotoProcessing ? (
-            '✨'
-          ) : itemPhoto ? (
-            <img src={itemPhoto} alt="" className="item-photo-btn-preview" />
-          ) : (
-            <span className="item-icon">{itemIcon}</span>
-          )}
-        </button>
-        {!itemPhoto && (
-          <select value={itemIcon} onChange={(e) => setItemIcon(e.target.value)} className="icon-select">
-            {QUICK_ICONS.map((icon) => (
-              <option key={icon} value={icon}>
-                {icon}
-              </option>
-            ))}
-          </select>
-        )}
-        {itemPhoto && (
-          <button type="button" className="item-photo-clear" onClick={() => setItemPhoto(null)} title="사진 지우기">
-            ✕
+        <div className="item-mode-toggle">
+          <button
+            type="button"
+            className={`item-mode-btn ${itemMode === 'photo' ? 'active' : ''}`}
+            onClick={() => setItemMode('photo')}
+          >
+            📷 사진으로 담기
           </button>
+          <button
+            type="button"
+            className={`item-mode-btn ${itemMode === 'icon' ? 'active' : ''}`}
+            onClick={() => {
+              setItemMode('icon')
+              setItemPhoto(null)
+            }}
+          >
+            🙂 이모티콘으로 담기
+          </button>
+        </div>
+
+        {itemMode === 'photo' ? (
+          <div className="item-capture-row">
+            <button
+              type="button"
+              className="item-photo-btn"
+              onClick={() => itemPhotoInputRef.current?.click()}
+              disabled={itemPhotoProcessing}
+              title="물건 사진 찍기"
+            >
+              {itemPhotoProcessing ? '✨' : itemPhoto ? <img src={itemPhoto} alt="" className="item-photo-btn-preview" /> : '📷'}
+            </button>
+            <span className="hint small">{itemPhoto ? '사진이 담겼어요' : '눌러서 물건 사진을 찍어보세요'}</span>
+            {itemPhoto && (
+              <button type="button" className="item-photo-clear" onClick={() => setItemPhoto(null)} title="사진 지우기">
+                ✕
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="icon-picker">
+            {QUICK_ICONS.map((icon) => (
+              <button
+                key={icon}
+                type="button"
+                className={`icon-picker-btn ${itemIcon === icon ? 'selected' : ''}`}
+                onClick={() => setItemIcon(icon)}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
         )}
-        <input
-          placeholder="물건 이름 입력 후 Enter"
-          value={itemName}
-          onChange={(e) => setItemName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submitItem()}
-        />
-        <button className="btn btn-sm" disabled={!itemName.trim()} onClick={submitItem}>
-          추가
-        </button>
+
+        <div className="item-name-row">
+          <input
+            className="item-name-input"
+            placeholder="물건 이름을 입력하세요"
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submitItem()}
+          />
+          <button className="btn btn-sm btn-primary" disabled={!itemName.trim()} onClick={submitItem}>
+            추가
+          </button>
+        </div>
       </div>
     </div>
   )
