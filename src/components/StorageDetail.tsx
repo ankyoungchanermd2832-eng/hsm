@@ -508,10 +508,10 @@ function PhotoTierEditor({
                 }
               }}
             />
+            <ItemList roomId={room.id} unitId={unit.id} basketId={openBasket.id} items={openBasket.items} />
             <button className="btn" onClick={() => setOpenBasketId(null)}>
               닫기 ✕
             </button>
-            <ItemList roomId={room.id} unitId={unit.id} basketId={openBasket.id} items={openBasket.items} />
           </div>
         </div>
       )}
