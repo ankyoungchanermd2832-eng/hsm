@@ -154,6 +154,7 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
                         />
                       ) : basket ? (
                         <BasketPanel
+                          key={basket.id}
                           roomId={room.id}
                           unitId={unit.id}
                           basketId={basket.id}
@@ -491,6 +492,7 @@ function PhotoTierEditor({
         <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
           <div className="modal-card photo-basket-modal" onClick={(e) => e.stopPropagation()}>
             <BasketPanel
+              key={openBasket.id}
               roomId={room.id}
               unitId={unit.id}
               basketId={openBasket.id}
@@ -646,6 +648,7 @@ function SplitCellPanel({
                 </span>
                 {subBasket ? (
                   <BasketPanel
+                    key={subBasket.id}
                     roomId={room.id}
                     unitId={unit.id}
                     basketId={subBasket.id}
