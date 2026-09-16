@@ -11,7 +11,6 @@ import {
 } from '../types'
 import { IsoCube } from './IsoCube'
 import { getUnitVisual } from '../utils/unitVisual'
-import { compressPhoto } from '../utils/compressImage'
 import { CabinetGallery } from './CabinetGallery'
 import { StorageDetail } from './StorageDetail'
 import './RoomEditor.css'
@@ -38,13 +37,10 @@ interface RoomEditorProps {
 export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }: RoomEditorProps) {
   const { addStorageUnit, moveStorageUnit, deleteStorageUnit, updateRoom } = useHouseStore()
   const floorRef = useRef<HTMLDivElement>(null)
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [placingType, setPlacingType] = useState<StorageType | null>(null)
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [showCabinetGallery, setShowCabinetGallery] = useState(false)
-  const [photoProcessing, setPhotoProcessing] = useState(false)
-  const photoMode = !!room.photo
   const draggingRef = useRef<{ unitId: string } | null>(null)
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPressRef = useRef<{ unitId: string; pointerId: number; startX: number; startY: number } | null>(null)
@@ -71,20 +67,6 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
       y: pos.y,
     })
     setPlacingType(null)
-  }
-
-  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setPhotoProcessing(true)
-    try {
-      const photo = await compressPhoto(file)
-      updateRoom(room.id, { photo })
-    } catch (err) {
-      console.error('방 사진을 처리하지 못했어요.', err)
-    }
-    setPhotoProcessing(false)
   }
 
   function cancelPendingPress() {
@@ -195,53 +177,6 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
 
         <div className="room-editor-body">
           <aside className="storage-palette">
-            <div className="room-photo-section">
-              <h4>방 사진</h4>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={handlePhotoChange}
-              />
-              {room.photo ? (
-                <>
-                  <img src={room.photo} alt="방 사진" className="room-photo-thumb" />
-                  <div className="room-photo-actions">
-                    <button
-                      className="btn btn-sm"
-                      onClick={() => photoInputRef.current?.click()}
-                      disabled={photoProcessing}
-                    >
-                      {photoProcessing ? '처리 중…' : '📷 다시 찍기'}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => {
-                        if (confirm('방 사진을 지울까요? 사진 위에 놓인 가구는 그대로 남아요.')) {
-                          updateRoom(room.id, { photo: null })
-                        }
-                      }}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <button
-                  className="btn"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={photoProcessing}
-                >
-                  {photoProcessing ? '✨ 처리 중…' : '📷 방 사진 찍기'}
-                </button>
-              )}
-              <p className="hint small">
-                사진을 찍어두면 실제 가구 위에 아이콘을 올려서 표시할 수 있어요.
-              </p>
-            </div>
-
             <h4>수납가구 배치하기</h4>
             <p className="hint">아이콘을 누른 뒤 바닥을 클릭하면 배치돼요.</p>
             {PALETTE.map((type) => (
@@ -277,23 +212,18 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
           </aside>
 
           <div
-            className={`room-floor ${placingType ? 'placing' : ''} ${photoMode ? 'has-photo' : ''}`}
+            className={`room-floor ${placingType ? 'placing' : ''}`}
             ref={floorRef}
             onClick={handleFloorClick}
             onPointerMove={handleFloorPointerMove}
             onPointerUp={handleFloorPointerUp}
             onPointerLeave={handleFloorPointerUp}
           >
-            {photoMode ? (
-              <img src={room.photo!} alt="" className="room-floor-photo" draggable={false} />
-            ) : (
-              <div className="room-floor-grid" />
-            )}
+            <div className="room-floor-grid" />
             {room.storageUnits.map((u) => (
               <UnitTile
                 key={u.id}
                 unit={u}
-                photoMode={photoMode}
                 onPointerDown={(e) => handleUnitPointerDown(e, u.id)}
                 onPointerMove={handleUnitPointerMove}
                 onPointerUp={(e) => handleUnitPointerUp(e, u.id)}
@@ -343,7 +273,6 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
 
 function UnitTile({
   unit,
-  photoMode,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -353,7 +282,6 @@ function UnitTile({
   pressing,
 }: {
   unit: StorageUnit
-  photoMode: boolean
   onPointerDown: (e: React.PointerEvent) => void
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: (e: React.PointerEvent) => void
@@ -367,7 +295,7 @@ function UnitTile({
 
   return (
     <div
-      className={`unit-tile ${photoMode ? 'unit-tile-pin' : ''} ${selected ? 'selected' : ''} ${highlighted ? 'pulse-highlight' : ''} ${pressing ? 'pressing' : ''}`}
+      className={`unit-tile ${selected ? 'selected' : ''} ${highlighted ? 'pulse-highlight' : ''} ${pressing ? 'pressing' : ''}`}
       style={{ left: `${unit.x}%`, top: `${unit.y}%` }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -376,21 +304,15 @@ function UnitTile({
       onContextMenu={(e) => e.preventDefault()}
       title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
     >
-      {photoMode ? (
-        <span className="unit-pin" style={{ background: visual.color }}>
-          {visual.icon}
-        </span>
-      ) : (
-        <IsoCube
-          color={visual.color}
-          icon={visual.icon}
-          width={unit.width}
-          height={unit.height}
-          rows={unit.rows}
-          cols={unit.cols}
-          hasTopBox={visual.hasTopBox}
-        />
-      )}
+      <IsoCube
+        color={visual.color}
+        icon={visual.icon}
+        width={unit.width}
+        height={unit.height}
+        rows={unit.rows}
+        cols={unit.cols}
+        hasTopBox={visual.hasTopBox}
+      />
       <span className="unit-tile-name">{unit.name}</span>
       {itemCount > 0 && <span className="unit-tile-count">{itemCount}</span>}
     </div>

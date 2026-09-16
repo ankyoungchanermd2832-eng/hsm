@@ -81,30 +81,6 @@
   font-size: 0.9rem;
 }
 
-.room-photo-section {
-  padding-bottom: 12px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-.room-photo-thumb {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  margin-bottom: 6px;
-}
-
-.room-photo-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.room-photo-actions .btn {
-  flex: 1;
-}
-
 .storage-palette .hint {
   font-size: 0.75rem;
   color: var(--muted);
@@ -200,20 +176,6 @@
   pointer-events: none;
 }
 
-.room-floor-photo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  user-select: none;
-}
-
-.room-floor.has-photo {
-  min-height: 320px;
-}
-
 .placing-hint {
   position: absolute;
   top: 10px;
@@ -269,24 +231,6 @@
 
 .unit-tile:active {
   cursor: grabbing;
-}
-
-/* 방 사진 위에 겹쳐 놓는 경우엔 입체 아이콘 대신 동그란 이모지 핀으로 표시한다 */
-.unit-pin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  font-size: 1.4rem;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
-}
-
-.unit-tile-pin.selected .unit-pin {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg), 0 3px 10px rgba(0, 0, 0, 0.45);
 }
 
 /* 가구를 꾹 누르고 있는 동안 "곧 옮길 수 있어요"를 알려주는 링 - 1초에 걸쳐 서서히 채워진다 */

@@ -303,6 +303,8 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
   )
 }
 
+const DEFAULT_BOX_SIZE = { width: 18, height: 14 }
+
 function PhotoTierEditor({
   room,
   unit,
@@ -314,12 +316,21 @@ function PhotoTierEditor({
 }) {
   const { addPhotoBasket, moveBasketPosition, renameBasket, deleteBasket } = useHouseStore()
   const photoRef = useRef<HTMLDivElement>(null)
-  const [placing, setPlacing] = useState(false)
+  const [drawing, setDrawing] = useState(false)
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
+  const [draftRect, setDraftRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
   const [openBasketId, setOpenBasketId] = useState<string | null>(null)
 
-  const draggingRef = useRef<{ basketId: string } | null>(null)
+  const draggingRef = useRef<{ basketId: string; offsetX: number; offsetY: number } | null>(null)
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingPressRef = useRef<{ basketId: string; pointerId: number; startX: number; startY: number } | null>(null)
+  const pendingPressRef = useRef<{
+    basketId: string
+    pointerId: number
+    startX: number
+    startY: number
+    boxX: number
+    boxY: number
+  } | null>(null)
   const lastTapRef = useRef<{ basketId: string; time: number } | null>(null)
   const [pressingBasketId, setPressingBasketId] = useState<string | null>(null)
 
@@ -330,14 +341,56 @@ function PhotoTierEditor({
     const rect = photoRef.current!.getBoundingClientRect()
     const x = ((clientX - rect.left) / rect.width) * 100
     const y = ((clientY - rect.top) / rect.height) * 100
-    return { x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) }
+    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
   }
 
-  function handlePhotoClick(e: React.MouseEvent) {
-    if (!placing) return
+  // 사진 위에 실제 서랍/선반 영역만큼 드래그해서 사각형으로 표시한다 (도면에 방 그리는 것과 같은 방식).
+  // 포인터 캡처를 걸어야 드래그 도중 화면이 살짝 스크롤되거나 손가락이 살짝 벗어나도
+  // 드래그가 중간에 끊기지 않는다.
+  function handlePhotoPointerDown(e: React.PointerEvent) {
+    if (!drawing) return
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const pos = relativePos(e.clientX, e.clientY)
-    addPhotoBasket(room.id, unit.id, `${photoBaskets.length + 1}단`, pos.x, pos.y)
-    setPlacing(false)
+    setDrawStart(pos)
+    setDraftRect({ x: pos.x, y: pos.y, width: 0, height: 0 })
+  }
+
+  function handlePhotoPointerMove(e: React.PointerEvent) {
+    if (drawing && drawStart) {
+      const pos = relativePos(e.clientX, e.clientY)
+      const x = Math.min(drawStart.x, pos.x)
+      const y = Math.min(drawStart.y, pos.y)
+      const width = Math.abs(pos.x - drawStart.x)
+      const height = Math.abs(pos.y - drawStart.y)
+      setDraftRect({ x, y, width, height })
+      return
+    }
+    const dragging = draggingRef.current
+    if (!dragging) return
+    const pos = relativePos(e.clientX, e.clientY)
+    moveBasketPosition(room.id, unit.id, dragging.basketId, pos.x - dragging.offsetX, pos.y - dragging.offsetY)
+  }
+
+  function handlePhotoPointerUp() {
+    if (drawing) {
+      setDrawStart(null)
+      if (draftRect && draftRect.width > 2 && draftRect.height > 2) {
+        addPhotoBasket(
+          room.id,
+          unit.id,
+          `${photoBaskets.length + 1}단`,
+          draftRect.x,
+          draftRect.y,
+          draftRect.width,
+          draftRect.height,
+        )
+        setDrawing(false)
+      }
+      setDraftRect(null)
+      return
+    }
+    draggingRef.current = null
+    cancelPendingPress()
   }
 
   function cancelPendingPress() {
@@ -351,18 +404,24 @@ function PhotoTierEditor({
 
   // 방의 가구 이동과 같은 규칙: 꾹 눌러야(1초) 옮길 수 있고, 짧게 두 번 눌러야 편집창이 열린다.
   // 브라우저 기본 동작(길게 누르기 메뉴, 더블탭 확대/검색 팝업)이 끼어들지 않도록 막는다.
-  function handleMarkerPointerDown(e: React.PointerEvent, basketId: string) {
+  function handleMarkerPointerDown(e: React.PointerEvent, basketId: string, boxX: number, boxY: number) {
     e.stopPropagation()
     e.preventDefault()
     const pointerId = e.pointerId
     ;(e.target as HTMLElement).setPointerCapture(pointerId)
-    pendingPressRef.current = { basketId, pointerId, startX: e.clientX, startY: e.clientY }
+    pendingPressRef.current = { basketId, pointerId, startX: e.clientX, startY: e.clientY, boxX, boxY }
     setPressingBasketId(basketId)
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
     pressTimerRef.current = setTimeout(() => {
       pressTimerRef.current = null
-      if (pendingPressRef.current?.basketId === basketId && pendingPressRef.current.pointerId === pointerId) {
-        draggingRef.current = { basketId }
+      const pending = pendingPressRef.current
+      if (pending?.basketId === basketId && pending.pointerId === pointerId) {
+        const startPos = relativePos(pending.startX, pending.startY)
+        draggingRef.current = {
+          basketId,
+          offsetX: startPos.x - pending.boxX,
+          offsetY: startPos.y - pending.boxY,
+        }
         pendingPressRef.current = null
         setPressingBasketId(null)
       }
@@ -401,55 +460,59 @@ function PhotoTierEditor({
     }
   }
 
-  function handlePhotoPointerMove(e: React.PointerEvent) {
-    const dragging = draggingRef.current
-    if (!dragging) return
-    const pos = relativePos(e.clientX, e.clientY)
-    moveBasketPosition(room.id, unit.id, dragging.basketId, pos.x, pos.y)
-  }
-
-  function handlePhotoPointerUp() {
-    draggingRef.current = null
-    cancelPendingPress()
-  }
-
   return (
     <div className="photo-tier-wrap">
       <div className="photo-tier-toolbar">
-        <button className={`btn btn-sm ${placing ? 'btn-active' : ''}`} onClick={() => setPlacing((v) => !v)}>
-          {placing ? '사진을 눌러서 놓기…' : '+ 단 추가'}
+        <button className={`btn btn-sm ${drawing ? 'btn-active' : ''}`} onClick={() => setDrawing((v) => !v)}>
+          {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 단 추가'}
         </button>
-        <span className="hint small">🧺 아이콘을 두 번 탭하면 안의 물건을 편집할 수 있어요.</span>
+        <span className="hint small">🧺 표시된 영역을 두 번 탭하면 안의 물건을 편집할 수 있어요.</span>
       </div>
       <div
-        className={`photo-tier-floor ${placing ? 'placing' : ''}`}
+        className={`photo-tier-floor ${drawing ? 'drawing' : ''}`}
         ref={photoRef}
-        onClick={handlePhotoClick}
+        onPointerDown={handlePhotoPointerDown}
         onPointerMove={handlePhotoPointerMove}
         onPointerUp={handlePhotoPointerUp}
         onPointerLeave={handlePhotoPointerUp}
       >
         <img src={unit.photo!} alt="" className="photo-tier-image" draggable={false} />
-        {photoBaskets.map((b) => (
+        {photoBaskets.map((b) => {
+          const width = b.width ?? DEFAULT_BOX_SIZE.width
+          const height = b.height ?? DEFAULT_BOX_SIZE.height
+          return (
+            <div
+              key={b.id}
+              className={`photo-tier-box ${pressingBasketId === b.id ? 'pressing' : ''} ${
+                b.id === highlightBasketId ? 'pulse-highlight' : ''
+              }`}
+              style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${width}%`, height: `${height}%` }}
+              onPointerDown={(e) => handleMarkerPointerDown(e, b.id, b.x ?? 0, b.y ?? 0)}
+              onPointerMove={handleMarkerPointerMove}
+              onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
+              onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
+              onContextMenu={(e) => e.preventDefault()}
+              title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
+            >
+              <span className="photo-tier-box-label">
+                🧺 {b.name}
+                {b.items.length > 0 ? ` (${b.items.length})` : ''}
+              </span>
+            </div>
+          )
+        })}
+        {draftRect && (
           <div
-            key={b.id}
-            className={`photo-basket-pin ${pressingBasketId === b.id ? 'pressing' : ''} ${
-              b.id === highlightBasketId ? 'pulse-highlight' : ''
-            }`}
-            style={{ left: `${b.x}%`, top: `${b.y}%` }}
-            onPointerDown={(e) => handleMarkerPointerDown(e, b.id)}
-            onPointerMove={handleMarkerPointerMove}
-            onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
-            onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
-            onContextMenu={(e) => e.preventDefault()}
-            title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
-          >
-            <span className="photo-basket-icon">🧺</span>
-            <span className="photo-basket-name">{b.name}</span>
-            {b.items.length > 0 && <span className="unit-tile-count">{b.items.length}</span>}
-          </div>
-        ))}
-        {placing && <div className="placing-hint">사진을 눌러서 이 자리에 놓기</div>}
+            className="photo-tier-draft"
+            style={{
+              left: `${draftRect.x}%`,
+              top: `${draftRect.y}%`,
+              width: `${draftRect.width}%`,
+              height: `${draftRect.height}%`,
+            }}
+          />
+        )}
+        {drawing && <div className="placing-hint">사진에서 실제 서랍/선반 영역만큼 드래그하세요</div>}
       </div>
 
       {openBasket && (

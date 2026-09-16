@@ -53,7 +53,6 @@ function normalizeHouse(house: House): House {
     ...house,
     rooms: (house.rooms ?? []).map((r) => ({
       ...r,
-      photo: r.photo ?? null,
       storageUnits: (r.storageUnits ?? []).map(normalizeStorageUnit),
     })),
   }
@@ -105,7 +104,15 @@ interface HouseState {
   // 실제 가구 사진을 붙이거나 뗀다
   setStorageUnitPhoto: (roomId: string, unitId: string, photo: string | null) => void
   // 가구 사진 위 특정 위치(x, y %)에 바구니(층)를 새로 놓는다
-  addPhotoBasket: (roomId: string, unitId: string, name: string, x: number, y: number) => string
+  addPhotoBasket: (
+    roomId: string,
+    unitId: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => string
   // 가구 사진 위에 놓인 바구니의 위치를 옮긴다
   moveBasketPosition: (roomId: string, unitId: string, basketId: string, x: number, y: number) => void
 
@@ -415,9 +422,9 @@ export const useHouseStore = create<HouseState>()(
           },
         })),
 
-      addPhotoBasket: (roomId, unitId, name, x, y) => {
+      addPhotoBasket: (roomId, unitId, name, x, y, width, height) => {
         const id = makeId()
-        const basket: Basket = { id, name, row: 0, col: 0, x, y, items: [] }
+        const basket: Basket = { id, name, row: 0, col: 0, x, y, width, height, items: [] }
         set((s) => ({
           house: {
             ...s.house,

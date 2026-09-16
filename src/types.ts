@@ -65,9 +65,11 @@ export interface Basket {
   col: number
   subRow?: number
   subCol?: number
-  // 가구 사진 위에 자유롭게 배치했을 때의 상대 좌표 (0~100 %)
+  // 가구 사진 위에 실제 서랍/선반 영역을 사각형으로 표시했을 때의 좌표/크기 (0~100 %)
   x?: number
   y?: number
+  width?: number
+  height?: number
   items: Item[]
 }
 
@@ -154,8 +156,6 @@ export interface Room {
   width: number
   height: number
   storageUnits: StorageUnit[]
-  // 휴대폰 카메라로 찍은 실제 방/가구 사진 - 있으면 가구 아이콘을 이 사진 위에 겹쳐서 배치한다
-  photo?: string | null
 }
 
 export interface House {
