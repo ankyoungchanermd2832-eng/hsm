@@ -67,20 +67,6 @@
   margin-top: 12px;
 }
 
-.unit-photo-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.unit-photo-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
 .photo-tier-wrap {
   margin-top: 16px;
 }
@@ -184,115 +170,6 @@
 .photo-basket-modal .btn {
   margin-top: 12px;
   width: 100%;
-}
-
-.size-editor {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel);
-}
-
-.size-editor-preview {
-  flex-shrink: 0;
-  width: 76px;
-  height: 96px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.size-editor-controls {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.size-editor-controls h4 {
-  margin: 0;
-  font-size: 0.85rem;
-}
-
-.size-preset-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.size-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.size-slider-row span {
-  width: 32px;
-  flex-shrink: 0;
-}
-
-.size-slider-row input[type='range'] {
-  flex: 1;
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-.size-number-input {
-  width: 58px;
-  flex-shrink: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.grid-stepper-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-}
-
-.grid-stepper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.grid-stepper-label {
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.grid-stepper-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 0.95rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.grid-stepper-btn:disabled {
-  opacity: 0.4;
-}
-
-.grid-stepper-value {
-  min-width: 18px;
-  text-align: center;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 .shelf-grid-wrap {
@@ -531,13 +408,6 @@
 }
 
 @media (max-width: 480px) {
-  .size-editor {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .size-editor-preview {
-    align-self: center;
-  }
   .shelf-grid {
     grid-template-columns: 1fr !important;
   }

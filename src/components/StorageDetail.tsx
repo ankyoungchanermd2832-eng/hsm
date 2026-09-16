@@ -5,12 +5,6 @@ import {
   CELL_SPLIT_MAX,
   CELL_SPLIT_MIN,
   STORAGE_TYPE_LABEL,
-  UNIT_GRID_MAX,
-  UNIT_GRID_MIN,
-  UNIT_SHAPE_PRESETS,
-  UNIT_SIZE_MIN,
-  UNIT_SIZE_SLIDER_MAX,
-  WARDROBE_STYLE_LABEL,
   type CellSplit,
   type Room,
   type StorageUnit,
@@ -18,7 +12,6 @@ import {
 import { sortByName } from '../utils/sort'
 import { getUnitVisual } from '../utils/unitVisual'
 import { compressPhoto } from '../utils/compressImage'
-import { IsoCube } from './IsoCube'
 import './StorageDetail.css'
 
 const QUICK_ICONS = ['📦', '👕', '📚', '🍳', '💊', '🧸', '🔌', '🧴', '📄', '🧦', '🧣', '🎁', '🛠️', '🧵']
@@ -43,9 +36,6 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
     moveBasketToCell,
     deleteBasket,
     renameStorageUnit,
-    resizeStorageUnit,
-    setStorageUnitGrid,
-    setWardrobeStyle,
     splitCell,
     setStorageUnitPhoto,
   } = useHouseStore()
@@ -98,129 +88,21 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
           </div>
         </div>
 
-        <div className="unit-photo-section">
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            onChange={handlePhotoChange}
-          />
-          {unit.photo ? (
-            <div className="unit-photo-controls">
-              <span className="hint small">이 가구 사진 위에서 층마다 바구니를 놓을 수 있어요.</span>
-              <div className="unit-photo-actions">
-                <button className="btn btn-sm" onClick={() => photoInputRef.current?.click()} disabled={photoProcessing}>
-                  {photoProcessing ? '처리 중…' : '📷 다시 찍기'}
-                </button>
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => {
-                    if (confirm('가구 사진을 지울까요? 사진 위에 놓은 바구니는 그대로 남아요.')) {
-                      setStorageUnitPhoto(room.id, unit.id, null)
-                    }
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          ) : (
+        {!unit.photo && (
+          <div className="unit-photo-section">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={handlePhotoChange}
+            />
             <button className="btn" onClick={() => photoInputRef.current?.click()} disabled={photoProcessing}>
               {photoProcessing ? '✨ 처리 중…' : '📷 가구 사진 찍기'}
             </button>
-          )}
-        </div>
-
-        <div className="size-editor">
-          <div className="size-editor-preview">
-            <IsoCube
-              color={visual.color}
-              icon={visual.icon}
-              width={unit.width}
-              height={unit.height}
-              rows={unit.rows}
-              cols={unit.cols}
-              hasTopBox={visual.hasTopBox}
-            />
           </div>
-          <div className="size-editor-controls">
-            <h4>크기와 모양</h4>
-            {unit.type === 'wardrobe' && (
-              <div className="size-preset-row">
-                {(['door', 'drawer'] as const).map((style) => (
-                  <button
-                    key={style}
-                    className={`btn btn-sm ${(unit.wardrobeStyle ?? 'door') === style ? 'btn-active' : ''}`}
-                    onClick={() => setWardrobeStyle(room.id, unit.id, style)}
-                  >
-                    {WARDROBE_STYLE_LABEL[style]}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="size-preset-row">
-              {UNIT_SHAPE_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  className="btn btn-sm"
-                  onClick={() => resizeStorageUnit(room.id, unit.id, preset.width, preset.height)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <label className="size-slider-row">
-              <span>너비</span>
-              <input
-                type="range"
-                min={UNIT_SIZE_MIN.width}
-                max={UNIT_SIZE_SLIDER_MAX.width}
-                value={Math.min(unit.width, UNIT_SIZE_SLIDER_MAX.width)}
-                onChange={(e) => resizeStorageUnit(room.id, unit.id, Number(e.target.value), unit.height)}
-              />
-              <input
-                type="number"
-                className="size-number-input"
-                min={UNIT_SIZE_MIN.width}
-                value={unit.width}
-                onChange={(e) => resizeStorageUnit(room.id, unit.id, Number(e.target.value) || UNIT_SIZE_MIN.width, unit.height)}
-              />
-            </label>
-            <label className="size-slider-row">
-              <span>높이</span>
-              <input
-                type="range"
-                min={UNIT_SIZE_MIN.height}
-                max={UNIT_SIZE_SLIDER_MAX.height}
-                value={Math.min(unit.height, UNIT_SIZE_SLIDER_MAX.height)}
-                onChange={(e) => resizeStorageUnit(room.id, unit.id, unit.width, Number(e.target.value))}
-              />
-              <input
-                type="number"
-                className="size-number-input"
-                min={UNIT_SIZE_MIN.height}
-                value={unit.height}
-                onChange={(e) => resizeStorageUnit(room.id, unit.id, unit.width, Number(e.target.value) || UNIT_SIZE_MIN.height)}
-              />
-            </label>
-            <p className="hint small">숫자칸에 직접 입력하면 크기 제한 없이 원하는 만큼 키울 수 있어요.</p>
-
-            <div className="grid-stepper-row">
-              <GridStepper
-                label="세로 층"
-                value={unit.rows}
-                onChange={(v) => setStorageUnitGrid(room.id, unit.id, v, unit.cols)}
-              />
-              <GridStepper
-                label="가로 칸"
-                value={unit.cols}
-                onChange={(v) => setStorageUnitGrid(room.id, unit.id, unit.rows, v)}
-              />
-            </div>
-          </div>
-        </div>
+        )}
 
         {photoMode ? (
           <PhotoTierEditor room={room} unit={unit} highlightBasketId={highlightBasketId} />
@@ -701,39 +583,6 @@ function SplitCellPanel({
         title={hasAny ? '안의 바구니를 모두 지우면 다시 합칠 수 있어요' : '나눈 칸을 다시 하나로 합쳐요'}
       >
         ⛶ 합치기
-      </button>
-    </div>
-  )
-}
-
-function GridStepper({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <div className="grid-stepper">
-      <span className="grid-stepper-label">{label}</span>
-      <button
-        className="grid-stepper-btn"
-        disabled={value <= UNIT_GRID_MIN}
-        onClick={() => onChange(value - 1)}
-        aria-label={`${label} 줄이기`}
-      >
-        −
-      </button>
-      <span className="grid-stepper-value">{value}</span>
-      <button
-        className="grid-stepper-btn"
-        disabled={value >= UNIT_GRID_MAX}
-        onClick={() => onChange(value + 1)}
-        aria-label={`${label} 늘리기`}
-      >
-        +
       </button>
     </div>
   )
