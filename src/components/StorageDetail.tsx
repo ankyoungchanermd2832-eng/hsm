@@ -742,7 +742,9 @@ function BasketPanel({
     setItemPhotoProcessing(true)
     let compressed: string | null = null
     try {
-      compressed = await compressPhoto(file)
+      // 물건 사진은 작은 썸네일로만 보여주므로 가구 사진보다 더 작게 줄여도 충분하다
+      // (용량이 작을수록 메모리 부담도 줄어든다).
+      compressed = await compressPhoto(file, 900)
       setItemPhoto(compressed)
     } catch (err) {
       console.error('물건 사진을 처리하지 못했어요.', err)
