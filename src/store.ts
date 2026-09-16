@@ -44,6 +44,7 @@ function normalizeStorageUnit(u: StorageUnit): StorageUnit {
     ...u,
     baskets: u.baskets ?? [],
     cellSplits: u.cellSplits ?? [],
+    photo: u.photo ?? null,
   }
 }
 
@@ -101,6 +102,12 @@ interface HouseState {
   splitCell: (roomId: string, unitId: string, row: number, col: number, subRows: number, subCols: number) => void
   // 나눴던 칸을 다시 하나로 합친다 (안이 비어있을 때만 의미가 있다)
   unsplitCell: (roomId: string, unitId: string, row: number, col: number) => void
+  // 실제 가구 사진을 붙이거나 뗀다
+  setStorageUnitPhoto: (roomId: string, unitId: string, photo: string | null) => void
+  // 가구 사진 위 특정 위치(x, y %)에 바구니(층)를 새로 놓는다
+  addPhotoBasket: (roomId: string, unitId: string, name: string, x: number, y: number) => string
+  // 가구 사진 위에 놓인 바구니의 위치를 옮긴다
+  moveBasketPosition: (roomId: string, unitId: string, basketId: string, x: number, y: number) => void
 
   addItem: (
     roomId: string,
@@ -385,6 +392,64 @@ export const useHouseStore = create<HouseState>()(
                     storageUnits: r.storageUnits.map((u) =>
                       u.id === unitId
                         ? { ...u, cellSplits: u.cellSplits.filter((sp) => !(sp.row === row && sp.col === col)) }
+                        : u,
+                    ),
+                  }
+                : r,
+            ),
+          },
+        })),
+
+      setStorageUnitPhoto: (roomId, unitId, photo) =>
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) => (u.id === unitId ? { ...u, photo } : u)),
+                  }
+                : r,
+            ),
+          },
+        })),
+
+      addPhotoBasket: (roomId, unitId, name, x, y) => {
+        const id = makeId()
+        const basket: Basket = { id, name, row: 0, col: 0, x, y, items: [] }
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) =>
+                      u.id === unitId ? { ...u, baskets: [...u.baskets, basket] } : u,
+                    ),
+                  }
+                : r,
+            ),
+          },
+        }))
+        return id
+      },
+
+      moveBasketPosition: (roomId, unitId, basketId, x, y) =>
+        set((s) => ({
+          house: {
+            ...s.house,
+            rooms: s.house.rooms.map((r) =>
+              r.id === roomId
+                ? {
+                    ...r,
+                    storageUnits: r.storageUnits.map((u) =>
+                      u.id === unitId
+                        ? {
+                            ...u,
+                            baskets: u.baskets.map((b) => (b.id === basketId ? { ...b, x, y } : b)),
+                          }
                         : u,
                     ),
                   }

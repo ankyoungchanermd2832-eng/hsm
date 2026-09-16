@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useHouseStore } from '../store'
 import {
   CELL_SPLIT_DEFAULT,
@@ -17,10 +17,16 @@ import {
 } from '../types'
 import { sortByName } from '../utils/sort'
 import { getUnitVisual } from '../utils/unitVisual'
+import { compressPhoto } from '../utils/compressImage'
 import { IsoCube } from './IsoCube'
 import './StorageDetail.css'
 
 const QUICK_ICONS = ['📦', '👕', '📚', '🍳', '💊', '🧸', '🔌', '🧴', '📄', '🧦', '🧣', '🎁', '🛠️', '🧵']
+
+// 바구니(단)를 옮기려면 이만큼(ms) 눌러야 드래그가 시작된다 - 방의 가구 이동과 같은 규칙.
+const LONG_PRESS_MS = 1000
+const PRESS_MOVE_CANCEL_PX = 8
+const DOUBLE_TAP_MS = 400
 
 interface StorageDetailProps {
   room: Room
@@ -41,9 +47,28 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
     setStorageUnitGrid,
     setWardrobeStyle,
     splitCell,
+    setStorageUnitPhoto,
   } = useHouseStore()
 
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [photoProcessing, setPhotoProcessing] = useState(false)
+  const photoMode = !!unit.photo
+
   const visual = getUnitVisual(unit)
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setPhotoProcessing(true)
+    try {
+      const photo = await compressPhoto(file)
+      setStorageUnitPhoto(room.id, unit.id, photo)
+    } catch (err) {
+      console.error('가구 사진을 처리하지 못했어요.', err)
+    }
+    setPhotoProcessing(false)
+  }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -71,6 +96,41 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
               닫기 ✕
             </button>
           </div>
+        </div>
+
+        <div className="unit-photo-section">
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={handlePhotoChange}
+          />
+          {unit.photo ? (
+            <div className="unit-photo-controls">
+              <span className="hint small">이 가구 사진 위에서 층마다 바구니를 놓을 수 있어요.</span>
+              <div className="unit-photo-actions">
+                <button className="btn btn-sm" onClick={() => photoInputRef.current?.click()} disabled={photoProcessing}>
+                  {photoProcessing ? '처리 중…' : '📷 다시 찍기'}
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  onClick={() => {
+                    if (confirm('가구 사진을 지울까요? 사진 위에 놓은 바구니는 그대로 남아요.')) {
+                      setStorageUnitPhoto(room.id, unit.id, null)
+                    }
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="btn" onClick={() => photoInputRef.current?.click()} disabled={photoProcessing}>
+              {photoProcessing ? '✨ 처리 중…' : '📷 가구 사진 찍기'}
+            </button>
+          )}
         </div>
 
         <div className="size-editor">
@@ -162,79 +222,262 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
           </div>
         </div>
 
-        <div className="shelf-grid-wrap">
-          <p className="hint small">
-            {unit.rows > 1 || unit.cols > 1
-              ? '가구의 층·칸마다 바구니를 놓아보세요. 맨 아래가 1층이에요.'
-              : '바구니를 놓고 물건을 정리해보세요.'}
-          </p>
-          <div className="shelf-grid" style={{ gridTemplateColumns: `repeat(${unit.cols}, minmax(180px, 1fr))` }}>
-            {Array.from({ length: unit.rows }).map((_, r) =>
-              Array.from({ length: unit.cols }).map((_, c) => {
-                const split = unit.cellSplits.find((sp) => sp.row === r && sp.col === c)
-                const basket = !split
-                  ? unit.baskets.find((b) => b.row === r && b.col === c && b.subRow === undefined)
-                  : undefined
-                const emptyCells: { row: number; col: number; label: string }[] = []
-                if (!split && unit.rows * unit.cols > 1) {
-                  for (let rr = 0; rr < unit.rows; rr++) {
-                    for (let cc = 0; cc < unit.cols; cc++) {
-                      if (unit.cellSplits.some((sp) => sp.row === rr && sp.col === cc)) continue
-                      if (
-                        !(rr === r && cc === c) &&
-                        !unit.baskets.some((b) => b.row === rr && b.col === cc && b.subRow === undefined)
-                      ) {
-                        emptyCells.push({ row: rr, col: cc, label: `${unit.rows - rr}층 · ${cc + 1}칸으로` })
+        {photoMode ? (
+          <PhotoTierEditor room={room} unit={unit} highlightBasketId={highlightBasketId} />
+        ) : (
+          <div className="shelf-grid-wrap">
+            <p className="hint small">
+              {unit.rows > 1 || unit.cols > 1
+                ? '가구의 층·칸마다 바구니를 놓아보세요. 맨 아래가 1층이에요.'
+                : '바구니를 놓고 물건을 정리해보세요.'}
+            </p>
+            <div className="shelf-grid" style={{ gridTemplateColumns: `repeat(${unit.cols}, minmax(180px, 1fr))` }}>
+              {Array.from({ length: unit.rows }).map((_, r) =>
+                Array.from({ length: unit.cols }).map((_, c) => {
+                  const split = unit.cellSplits.find((sp) => sp.row === r && sp.col === c)
+                  const basket = !split
+                    ? unit.baskets.find((b) => b.row === r && b.col === c && b.subRow === undefined)
+                    : undefined
+                  const emptyCells: { row: number; col: number; label: string }[] = []
+                  if (!split && unit.rows * unit.cols > 1) {
+                    for (let rr = 0; rr < unit.rows; rr++) {
+                      for (let cc = 0; cc < unit.cols; cc++) {
+                        if (unit.cellSplits.some((sp) => sp.row === rr && sp.col === cc)) continue
+                        if (
+                          !(rr === r && cc === c) &&
+                          !unit.baskets.some((b) => b.row === rr && b.col === cc && b.subRow === undefined)
+                        ) {
+                          emptyCells.push({ row: rr, col: cc, label: `${unit.rows - rr}층 · ${cc + 1}칸으로` })
+                        }
                       }
                     }
                   }
+                  return (
+                    <div className="shelf-cell" key={`${r}-${c}`}>
+                      {(unit.rows > 1 || unit.cols > 1) && (
+                        <span className="shelf-cell-label">
+                          {unit.rows - r}층 · {c + 1}칸
+                        </span>
+                      )}
+                      {split ? (
+                        <SplitCellPanel
+                          room={room}
+                          unit={unit}
+                          row={r}
+                          col={c}
+                          split={split}
+                          highlightBasketId={highlightBasketId}
+                        />
+                      ) : basket ? (
+                        <BasketPanel
+                          roomId={room.id}
+                          unitId={unit.id}
+                          basketId={basket.id}
+                          name={basket.name}
+                          items={basket.items}
+                          emptyCells={emptyCells}
+                          highlighted={basket.id === highlightBasketId}
+                          onRename={(name) => renameBasket(room.id, unit.id, basket.id, name)}
+                          onMove={(row, col, subRow, subCol) =>
+                            moveBasketToCell(room.id, unit.id, basket.id, row, col, subRow, subCol)
+                          }
+                          onDelete={() => {
+                            if (confirm(`'${basket.name}' 바구니를 삭제할까요?`)) deleteBasket(room.id, unit.id, basket.id)
+                          }}
+                        />
+                      ) : (
+                        <EmptyCell
+                          onAdd={(name) => addBasket(room.id, unit.id, name, r, c)}
+                          onSplit={(subRows, subCols) => splitCell(room.id, unit.id, r, c, subRows, subCols)}
+                        />
+                      )}
+                    </div>
+                  )
+                }),
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PhotoTierEditor({
+  room,
+  unit,
+  highlightBasketId,
+}: {
+  room: Room
+  unit: StorageUnit
+  highlightBasketId?: string | null
+}) {
+  const { addPhotoBasket, moveBasketPosition, renameBasket, deleteBasket } = useHouseStore()
+  const photoRef = useRef<HTMLDivElement>(null)
+  const [placing, setPlacing] = useState(false)
+  const [openBasketId, setOpenBasketId] = useState<string | null>(null)
+
+  const draggingRef = useRef<{ basketId: string } | null>(null)
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPressRef = useRef<{ basketId: string; pointerId: number; startX: number; startY: number } | null>(null)
+  const lastTapRef = useRef<{ basketId: string; time: number } | null>(null)
+  const [pressingBasketId, setPressingBasketId] = useState<string | null>(null)
+
+  const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
+  const openBasket = photoBaskets.find((b) => b.id === openBasketId) ?? null
+
+  function relativePos(clientX: number, clientY: number) {
+    const rect = photoRef.current!.getBoundingClientRect()
+    const x = ((clientX - rect.left) / rect.width) * 100
+    const y = ((clientY - rect.top) / rect.height) * 100
+    return { x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) }
+  }
+
+  function handlePhotoClick(e: React.MouseEvent) {
+    if (!placing) return
+    const pos = relativePos(e.clientX, e.clientY)
+    addPhotoBasket(room.id, unit.id, `${photoBaskets.length + 1}단`, pos.x, pos.y)
+    setPlacing(false)
+  }
+
+  function cancelPendingPress() {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
+    pendingPressRef.current = null
+    setPressingBasketId(null)
+  }
+
+  // 방의 가구 이동과 같은 규칙: 꾹 눌러야(1초) 옮길 수 있고, 짧게 두 번 눌러야 편집창이 열린다.
+  // 브라우저 기본 동작(길게 누르기 메뉴, 더블탭 확대/검색 팝업)이 끼어들지 않도록 막는다.
+  function handleMarkerPointerDown(e: React.PointerEvent, basketId: string) {
+    e.stopPropagation()
+    e.preventDefault()
+    const pointerId = e.pointerId
+    ;(e.target as HTMLElement).setPointerCapture(pointerId)
+    pendingPressRef.current = { basketId, pointerId, startX: e.clientX, startY: e.clientY }
+    setPressingBasketId(basketId)
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
+    pressTimerRef.current = setTimeout(() => {
+      pressTimerRef.current = null
+      if (pendingPressRef.current?.basketId === basketId && pendingPressRef.current.pointerId === pointerId) {
+        draggingRef.current = { basketId }
+        pendingPressRef.current = null
+        setPressingBasketId(null)
+      }
+    }, LONG_PRESS_MS)
+  }
+
+  function handleMarkerPointerMove(e: React.PointerEvent) {
+    const pending = pendingPressRef.current
+    if (!pending || pending.pointerId !== e.pointerId || draggingRef.current) return
+    const dx = e.clientX - pending.startX
+    const dy = e.clientY - pending.startY
+    if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
+      cancelPendingPress()
+      lastTapRef.current = null
+    }
+  }
+
+  function handleMarkerPointerUp(e: React.PointerEvent, basketId: string) {
+    const pending = pendingPressRef.current
+    const wasCleanPress = pending?.pointerId === e.pointerId && pending.basketId === basketId
+    const wasDragging = draggingRef.current?.basketId === basketId
+    cancelPendingPress()
+    if (wasDragging) return
+
+    if (wasCleanPress) {
+      const now = Date.now()
+      const last = lastTapRef.current
+      if (last && last.basketId === basketId && now - last.time < DOUBLE_TAP_MS) {
+        lastTapRef.current = null
+        setOpenBasketId(basketId)
+      } else {
+        lastTapRef.current = { basketId, time: now }
+      }
+    } else {
+      lastTapRef.current = null
+    }
+  }
+
+  function handlePhotoPointerMove(e: React.PointerEvent) {
+    const dragging = draggingRef.current
+    if (!dragging) return
+    const pos = relativePos(e.clientX, e.clientY)
+    moveBasketPosition(room.id, unit.id, dragging.basketId, pos.x, pos.y)
+  }
+
+  function handlePhotoPointerUp() {
+    draggingRef.current = null
+    cancelPendingPress()
+  }
+
+  return (
+    <div className="photo-tier-wrap">
+      <div className="photo-tier-toolbar">
+        <button className={`btn btn-sm ${placing ? 'btn-active' : ''}`} onClick={() => setPlacing((v) => !v)}>
+          {placing ? '사진을 눌러서 놓기…' : '+ 단 추가'}
+        </button>
+        <span className="hint small">🧺 아이콘을 두 번 탭하면 안의 물건을 편집할 수 있어요.</span>
+      </div>
+      <div
+        className={`photo-tier-floor ${placing ? 'placing' : ''}`}
+        ref={photoRef}
+        onClick={handlePhotoClick}
+        onPointerMove={handlePhotoPointerMove}
+        onPointerUp={handlePhotoPointerUp}
+        onPointerLeave={handlePhotoPointerUp}
+      >
+        <img src={unit.photo!} alt="" className="photo-tier-image" draggable={false} />
+        {photoBaskets.map((b) => (
+          <div
+            key={b.id}
+            className={`photo-basket-pin ${pressingBasketId === b.id ? 'pressing' : ''} ${
+              b.id === highlightBasketId ? 'pulse-highlight' : ''
+            }`}
+            style={{ left: `${b.x}%`, top: `${b.y}%` }}
+            onPointerDown={(e) => handleMarkerPointerDown(e, b.id)}
+            onPointerMove={handleMarkerPointerMove}
+            onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
+            onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
+            onContextMenu={(e) => e.preventDefault()}
+            title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
+          >
+            <span className="photo-basket-icon">🧺</span>
+            <span className="photo-basket-name">{b.name}</span>
+            {b.items.length > 0 && <span className="unit-tile-count">{b.items.length}</span>}
+          </div>
+        ))}
+        {placing && <div className="placing-hint">사진을 눌러서 이 자리에 놓기</div>}
+      </div>
+
+      {openBasket && (
+        <div className="modal-backdrop" onClick={() => setOpenBasketId(null)}>
+          <div className="modal-card photo-basket-modal" onClick={(e) => e.stopPropagation()}>
+            <BasketPanel
+              roomId={room.id}
+              unitId={unit.id}
+              basketId={openBasket.id}
+              name={openBasket.name}
+              items={openBasket.items}
+              emptyCells={[]}
+              highlighted={false}
+              onRename={(name) => renameBasket(room.id, unit.id, openBasket.id, name)}
+              onMove={() => {}}
+              onDelete={() => {
+                if (confirm(`'${openBasket.name}' 바구니를 삭제할까요?`)) {
+                  deleteBasket(room.id, unit.id, openBasket.id)
+                  setOpenBasketId(null)
                 }
-                return (
-                  <div className="shelf-cell" key={`${r}-${c}`}>
-                    {(unit.rows > 1 || unit.cols > 1) && (
-                      <span className="shelf-cell-label">
-                        {unit.rows - r}층 · {c + 1}칸
-                      </span>
-                    )}
-                    {split ? (
-                      <SplitCellPanel
-                        room={room}
-                        unit={unit}
-                        row={r}
-                        col={c}
-                        split={split}
-                        highlightBasketId={highlightBasketId}
-                      />
-                    ) : basket ? (
-                      <BasketPanel
-                        roomId={room.id}
-                        unitId={unit.id}
-                        basketId={basket.id}
-                        name={basket.name}
-                        items={basket.items}
-                        emptyCells={emptyCells}
-                        highlighted={basket.id === highlightBasketId}
-                        onRename={(name) => renameBasket(room.id, unit.id, basket.id, name)}
-                        onMove={(row, col, subRow, subCol) =>
-                          moveBasketToCell(room.id, unit.id, basket.id, row, col, subRow, subCol)
-                        }
-                        onDelete={() => {
-                          if (confirm(`'${basket.name}' 바구니를 삭제할까요?`)) deleteBasket(room.id, unit.id, basket.id)
-                        }}
-                      />
-                    ) : (
-                      <EmptyCell
-                        onAdd={(name) => addBasket(room.id, unit.id, name, r, c)}
-                        onSplit={(subRows, subCols) => splitCell(room.id, unit.id, r, c, subRows, subCols)}
-                      />
-                    )}
-                  </div>
-                )
-              }),
-            )}
+              }}
+            />
+            <button className="btn" onClick={() => setOpenBasketId(null)}>
+              닫기 ✕
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

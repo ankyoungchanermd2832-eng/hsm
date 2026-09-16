@@ -65,6 +65,9 @@ export interface Basket {
   col: number
   subRow?: number
   subCol?: number
+  // 가구 사진 위에 자유롭게 배치했을 때의 상대 좌표 (0~100 %)
+  x?: number
+  y?: number
   items: Item[]
 }
 
@@ -131,6 +134,8 @@ export interface StorageUnit {
   baskets: Basket[]
   // 특정 칸을 내부적으로 더 잘게 나눈 정보들
   cellSplits: CellSplit[]
+  // 실제 가구를 찍은 사진 - 있으면 층 구분을 그 사진 위에 이모티콘으로 겹쳐서 표시한다
+  photo?: string | null
 }
 
 export const WARDROBE_STYLE_LABEL: Record<'door' | 'drawer', string> = {
