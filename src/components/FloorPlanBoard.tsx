@@ -32,6 +32,7 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [drawMode, setDrawMode] = useState(false)
+  const [deleteMode, setDeleteMode] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [draftRect, setDraftRect] = useState<DrawRect | null>(null)
   const [pendingRect, setPendingRect] = useState<DrawRect | null>(null)
@@ -142,10 +143,23 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
         />
         <button
           className={`btn ${drawMode ? 'btn-active' : ''}`}
-          onClick={() => setDrawMode((v) => !v)}
+          onClick={() => {
+            setDrawMode((v) => !v)
+            setDeleteMode(false)
+          }}
           disabled={!house.floorPlanImage || processingImage}
         >
           {drawMode ? '✏️ 방 그리는 중… (드래그해서 영역 지정)' : '➕ 방 추가하기'}
+        </button>
+        <button
+          className={`btn ${deleteMode ? 'btn-active btn-danger' : ''}`}
+          onClick={() => {
+            setDeleteMode((v) => !v)
+            setDrawMode(false)
+          }}
+          disabled={house.rooms.length === 0 || processingImage}
+        >
+          {deleteMode ? '🗑️ 삭제할 방을 눌러주세요' : '🗑️ 방 삭제'}
         </button>
       </div>
 
@@ -188,8 +202,17 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
               key={room.id}
               room={room}
               highlighted={room.id === highlightRoomId}
-              onOpen={() => !drawMode && onOpenRoom(room.id)}
-              onDelete={() => deleteRoom(room.id)}
+              deleteMode={deleteMode}
+              onClick={() => {
+                if (drawMode) return
+                if (deleteMode) {
+                  if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) {
+                    deleteRoom(room.id)
+                  }
+                  return
+                }
+                onOpenRoom(room.id)
+              }}
             />
           ))}
 
@@ -249,17 +272,17 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
 function RoomBox({
   room,
   highlighted,
-  onOpen,
-  onDelete,
+  deleteMode,
+  onClick,
 }: {
   room: Room
   highlighted: boolean
-  onOpen: () => void
-  onDelete: () => void
+  deleteMode: boolean
+  onClick: () => void
 }) {
   return (
     <div
-      className={`room-box ${highlighted ? 'pulse-highlight' : ''}`}
+      className={`room-box ${highlighted ? 'pulse-highlight' : ''} ${deleteMode ? 'delete-target' : ''}`}
       style={{
         left: `${room.x}%`,
         top: `${room.y}%`,
@@ -267,22 +290,13 @@ function RoomBox({
         height: `${room.height}%`,
         borderColor: ROOM_KIND_COLOR[room.kind],
       }}
-      onClick={onOpen}
+      onClick={onClick}
+      title={deleteMode ? `'${room.name}' 삭제하기` : undefined}
     >
       <span className="room-box-label" style={{ background: ROOM_KIND_COLOR[room.kind] }}>
         {room.name}
         <em>({room.storageUnits.length})</em>
       </span>
-      <button
-        className="room-box-delete"
-        onClick={(e) => {
-          e.stopPropagation()
-          if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) onDelete()
-        }}
-        title="방 삭제"
-      >
-        ✕
-      </button>
     </div>
   )
 }

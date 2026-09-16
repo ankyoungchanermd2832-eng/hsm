@@ -103,26 +103,14 @@
   font-weight: 400;
 }
 
-.room-box-delete {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 0.65rem;
-  line-height: 1;
+.room-box.delete-target {
   cursor: pointer;
-  display: none;
-  align-items: center;
-  justify-content: center;
+  border-style: dashed;
+  background: rgba(224, 71, 90, 0.18);
 }
 
-.room-box:hover .room-box-delete {
-  display: flex;
+.room-box.delete-target:hover {
+  background: rgba(224, 71, 90, 0.32);
 }
 
 @media (hover: none) {

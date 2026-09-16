@@ -52,6 +52,7 @@ function normalizeHouse(house: House): House {
     ...house,
     rooms: (house.rooms ?? []).map((r) => ({
       ...r,
+      photo: r.photo ?? null,
       storageUnits: (r.storageUnits ?? []).map(normalizeStorageUnit),
     })),
   }

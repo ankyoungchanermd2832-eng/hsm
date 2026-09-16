@@ -149,6 +149,8 @@ export interface Room {
   width: number
   height: number
   storageUnits: StorageUnit[]
+  // 휴대폰 카메라로 찍은 실제 방/가구 사진 - 있으면 가구 아이콘을 이 사진 위에 겹쳐서 배치한다
+  photo?: string | null
 }
 
 export interface House {
