@@ -88,9 +88,6 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
             >
               🗑️ 삭제
             </button>
-            <button className="btn" onClick={onClose}>
-              닫기 ✕
-            </button>
           </div>
         </div>
 
@@ -186,6 +183,10 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
             </div>
           </div>
         )}
+
+        <button className="btn storage-detail-close-btn" onClick={onClose}>
+          닫기 ✕
+        </button>
       </div>
     </div>
   )

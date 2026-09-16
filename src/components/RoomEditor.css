@@ -86,6 +86,10 @@
   gap: 14px;
 }
 
+.room-close-btn {
+  margin-top: 4px;
+}
+
 .furniture-card {
   display: flex;
   flex-direction: column;

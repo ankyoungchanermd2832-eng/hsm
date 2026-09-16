@@ -65,9 +65,6 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
               ))}
             </select>
           </div>
-          <button className="btn" onClick={onClose}>
-            닫기 ✕
-          </button>
         </div>
 
         <div className="room-editor-body-v2">
@@ -111,6 +108,10 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
               ))
             )}
           </div>
+
+          <button className="btn room-close-btn" onClick={onClose}>
+            닫기 ✕
+          </button>
         </div>
       </div>
 
