@@ -19,7 +19,6 @@ const QUICK_ICONS = ['📦', '👕', '📚', '🍳', '💊', '🧸', '🔌', '�
 // 바구니(단)를 옮기려면 이만큼(ms) 눌러야 드래그가 시작된다 - 방의 가구 이동과 같은 규칙.
 const LONG_PRESS_MS = 1000
 const PRESS_MOVE_CANCEL_PX = 8
-const DOUBLE_TAP_MS = 400
 
 interface StorageDetailProps {
   room: Room
@@ -213,7 +212,6 @@ function PhotoTierEditor({
     boxX: number
     boxY: number
   } | null>(null)
-  const lastTapRef = useRef<{ basketId: string; time: number } | null>(null)
   const [pressingBasketId, setPressingBasketId] = useState<string | null>(null)
 
   const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
@@ -317,10 +315,10 @@ function PhotoTierEditor({
     const dy = e.clientY - pending.startY
     if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
       cancelPendingPress()
-      lastTapRef.current = null
     }
   }
 
+  // 꾹 누르면(약 1초) 옮기고, 짧게 한 번 탭하면 바로 편집창이 열린다.
   function handleMarkerPointerUp(e: React.PointerEvent, basketId: string) {
     const pending = pendingPressRef.current
     const wasCleanPress = pending?.pointerId === e.pointerId && pending.basketId === basketId
@@ -329,16 +327,7 @@ function PhotoTierEditor({
     if (wasDragging) return
 
     if (wasCleanPress) {
-      const now = Date.now()
-      const last = lastTapRef.current
-      if (last && last.basketId === basketId && now - last.time < DOUBLE_TAP_MS) {
-        lastTapRef.current = null
-        setOpenBasketId(basketId)
-      } else {
-        lastTapRef.current = { basketId, time: now }
-      }
-    } else {
-      lastTapRef.current = null
+      setOpenBasketId(basketId)
     }
   }
 
@@ -348,7 +337,7 @@ function PhotoTierEditor({
         <button className={`btn btn-sm ${drawing ? 'btn-active' : ''}`} onClick={() => setDrawing((v) => !v)}>
           {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 단 추가'}
         </button>
-        <span className="hint small">🧺 표시된 영역을 두 번 탭하면 안의 물건을 편집할 수 있어요.</span>
+        <span className="hint small">🧺 표시된 영역을 탭하면 안의 물건을 편집할 수 있어요.</span>
       </div>
       <div
         className={`photo-tier-floor ${drawing ? 'drawing' : ''}`}
@@ -374,7 +363,7 @@ function PhotoTierEditor({
               onPointerUp={(e) => handleMarkerPointerUp(e, b.id)}
               onPointerCancel={(e) => handleMarkerPointerUp(e, b.id)}
               onContextMenu={(e) => e.preventDefault()}
-              title="꾹 눌러서(약 1초) 위치 이동 · 두 번 탭해서 내용 편집"
+              title="꾹 눌러서(약 1초) 위치 이동 · 탭해서 내용 편집"
             >
               <span className="photo-tier-box-label">
                 🧺 {b.name}
@@ -656,7 +645,7 @@ function BasketPanel({
         <span className="basket-icon">🧺</span>
         <input className="basket-name-input" value={name} onChange={(e) => onRename(e.target.value)} />
         <button className="basket-delete-btn" onClick={onDelete} title="바구니 삭제">
-          ✕
+          삭제
         </button>
       </div>
 
