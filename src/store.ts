@@ -41,17 +41,31 @@ function normalizeBasketName(name: string): string {
   return match ? match[1] : name
 }
 
+// Firebase Realtime Database는 배열 중간 항목이 지워지는 등 "빈 자리"가 생기면 배열이
+// 아니라 숫자 키를 가진 객체({"0": ..., "2": ...})로 바꿔서 저장한다. 그대로 두면
+// Array.isArray 체크에 걸려 목록 전체가 사라진 것처럼 보이므로, 객체 형태로 와도
+// 값들을 순서대로 복원한다.
+function toArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
+  if (value && typeof value === 'object') return Object.values(value) as T[]
+  return []
+}
+
 // 저장된 데이터가 예전 버전(칸 나누기 기능 등이 없던 시절)에 만들어졌을 수 있어서,
 // 그때는 없던 필드가 비어 있어도 화면이 깨지지 않도록 기본값을 채워준다.
 // (localStorage 복원 시점과, 다른 기기와 동기화로 house를 통째로 받아올 때 모두 사용한다)
 function normalizeStorageUnit(u: StorageUnit): StorageUnit {
-  const baskets = Array.isArray(u.baskets) ? u.baskets : []
+  const baskets = toArray<Basket>(u.baskets)
   return {
     ...UNIT_SIZE_DEFAULT,
     ...UNIT_GRID_DEFAULT,
     ...u,
-    baskets: baskets.map((b) => ({ ...b, name: normalizeBasketName(b?.name ?? '') })),
-    cellSplits: Array.isArray(u.cellSplits) ? u.cellSplits : [],
+    baskets: baskets.map((b) => ({
+      ...b,
+      name: normalizeBasketName(b?.name ?? ''),
+      items: toArray<Item>(b?.items),
+    })),
+    cellSplits: toArray<CellSplit>(u.cellSplits),
     photo: u.photo ?? null,
   }
 }
@@ -60,12 +74,12 @@ function normalizeStorageUnit(u: StorageUnit): StorageUnit {
 // 앱 전체가 하얀 화면으로 멈추지 않도록, 방/수납가구 목록을 최대한 방어적으로 다듬는다.
 // 여기서 문제가 생기면 그 방/가구 하나만 건너뛰고 나머지는 그대로 살린다.
 function normalizeHouse(house: House): House {
-  const rooms = Array.isArray(house?.rooms) ? house.rooms : []
+  const rooms = toArray<Room>(house?.rooms)
   return {
     floorPlanImage: house?.floorPlanImage ?? null,
     rooms: rooms.flatMap((r) => {
       try {
-        const storageUnits = Array.isArray(r.storageUnits) ? r.storageUnits : []
+        const storageUnits = toArray<StorageUnit>(r.storageUnits)
         return [
           {
             ...r,

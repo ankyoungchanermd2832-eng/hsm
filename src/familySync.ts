@@ -44,16 +44,23 @@ function startSyncForCode(code: string) {
   let lastKnownUpdatedAt = 0
   const houseRef = ref(db, `houses/${code}`)
 
-  const listener = onValue(houseRef, (snapshot) => {
-    const payload = snapshot.val() as SyncPayload | null
-    if (!payload?.house || payload.updatedAt <= lastKnownUpdatedAt) return
-    lastKnownUpdatedAt = payload.updatedAt
-    suppressPush = true
-    useHouseStore.getState().hydrateHouse(payload.house)
-    setTimeout(() => {
-      suppressPush = false
-    }, 0)
-  })
+  const listener = onValue(
+    houseRef,
+    (snapshot) => {
+      const payload = snapshot.val() as SyncPayload | null
+      if (!payload?.house || payload.updatedAt <= lastKnownUpdatedAt) return
+      lastKnownUpdatedAt = payload.updatedAt
+      suppressPush = true
+      useHouseStore.getState().hydrateHouse(payload.house)
+      setTimeout(() => {
+        suppressPush = false
+      }, 0)
+    },
+    (err) => {
+      // 권한 규칙 문제 등으로 못 읽으면 조용히 실패하지 않고 콘솔에라도 남긴다.
+      console.error('가족 공유 데이터를 받아오지 못했어요 (권한/네트워크 문제일 수 있어요).', err)
+    },
+  )
 
   const storeUnsubscribe = useHouseStore.subscribe((state, prevState) => {
     if (suppressPush || state.house === prevState.house) return
@@ -61,7 +68,11 @@ function startSyncForCode(code: string) {
     pushTimer = setTimeout(() => {
       const updatedAt = Date.now()
       lastKnownUpdatedAt = updatedAt
-      void dbSet(houseRef, { house: useHouseStore.getState().house, updatedAt } satisfies SyncPayload)
+      void dbSet(houseRef, { house: useHouseStore.getState().house, updatedAt } satisfies SyncPayload).catch(
+        (err) => {
+          console.error('가족 공유 데이터를 올리지 못했어요 (권한/네트워크 문제일 수 있어요).', err)
+        },
+      )
     }, PUSH_DEBOUNCE_MS)
   })
 
@@ -82,7 +93,9 @@ export function createFamilyCode(): string {
     void dbSet(ref(db, `houses/${code}`), {
       house: useHouseStore.getState().house,
       updatedAt: Date.now(),
-    } satisfies SyncPayload)
+    } satisfies SyncPayload).catch((err) => {
+      console.error('가족 공유 코드를 만들었지만 초기 데이터를 올리지 못했어요.', err)
+    })
   }
   return code
 }
