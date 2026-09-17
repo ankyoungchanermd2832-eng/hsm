@@ -91,7 +91,7 @@ export function FamilyShareModal({ onClose }: FamilyShareModalProps) {
           <>
             <div className="family-share-section">
               <p className="hint small">아직 아무와도 공유하지 않은 상태예요. 아래 중 하나를 골라주세요.</p>
-              <button className="btn btn-primary" onClick={handleCreate}>➕ 새로 공유 시작하기</button>
+              <button className="btn btn-primary" onClick={handleCreate}>➕ 내가 저장한 수납 정보를 가족에게 공유하기</button>
               <p className="hint small">코드가 생성되면 그 코드를 가족에게 카카오톡 등으로 알려주세요.</p>
             </div>
             <div className="family-share-section">
