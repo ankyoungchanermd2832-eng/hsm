@@ -69,6 +69,19 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+.room-box.pressing {
+  transition: box-shadow 1s linear, transform 0.15s ease;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 3px #fff;
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-box.pressing {
+    transition: none;
+  }
+}
+
 /* 방 오른쪽 아래 손잡이 - 꾹 눌러야(약 1초) 활성화되고, 그 뒤로 끌면 방 크기가 바뀐다.
    가구 사진의 보관함 크기 조정 손잡이와 같은 방식이다. */
 .room-resize-handle {

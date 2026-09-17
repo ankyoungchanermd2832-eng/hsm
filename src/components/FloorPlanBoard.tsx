@@ -66,6 +66,79 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
   } | null>(null)
   const [resizeArmedRoomId, setResizeArmedRoomId] = useState<string | null>(null)
 
+  // 방 위치 옮기기 - 가구 보관함과 같은 규칙: 꾹 눌러야(약 1초) 옮길 수 있고, 짧게 탭하면 열린다.
+  const draggingRoomRef = useRef<{ roomId: string; offsetX: number; offsetY: number } | null>(null)
+  const movePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingMoveRef = useRef<{
+    roomId: string
+    pointerId: number
+    startX: number
+    startY: number
+    boxX: number
+    boxY: number
+  } | null>(null)
+  const [pressingRoomId, setPressingRoomId] = useState<string | null>(null)
+
+  function cancelPendingRoomMove() {
+    if (movePressTimerRef.current) {
+      clearTimeout(movePressTimerRef.current)
+      movePressTimerRef.current = null
+    }
+    pendingMoveRef.current = null
+    setPressingRoomId(null)
+  }
+
+  function handleRoomPointerDown(e: React.PointerEvent, roomId: string, boxX: number, boxY: number) {
+    if (drawMode) return
+    e.stopPropagation()
+    e.preventDefault()
+    const pointerId = e.pointerId
+    ;(e.target as HTMLElement).setPointerCapture(pointerId)
+    pendingMoveRef.current = { roomId, pointerId, startX: e.clientX, startY: e.clientY, boxX, boxY }
+    setPressingRoomId(roomId)
+    if (movePressTimerRef.current) clearTimeout(movePressTimerRef.current)
+    movePressTimerRef.current = setTimeout(() => {
+      movePressTimerRef.current = null
+      const pending = pendingMoveRef.current
+      if (pending?.roomId === roomId && pending.pointerId === pointerId) {
+        const startPos = relativePos(pending.startX, pending.startY)
+        draggingRoomRef.current = {
+          roomId,
+          offsetX: startPos.x - pending.boxX,
+          offsetY: startPos.y - pending.boxY,
+        }
+        pendingMoveRef.current = null
+        setPressingRoomId(null)
+      }
+    }, LONG_PRESS_MS)
+  }
+
+  function handleRoomPointerMove(e: React.PointerEvent) {
+    const dragging = draggingRoomRef.current
+    if (!dragging) return
+    e.stopPropagation()
+    const room = house.rooms.find((r) => r.id === dragging.roomId)
+    if (!room) return
+    const pos = relativePos(e.clientX, e.clientY)
+    const x = Math.max(0, Math.min(100 - room.width, pos.x - dragging.offsetX))
+    const y = Math.max(0, Math.min(100 - room.height, pos.y - dragging.offsetY))
+    updateRoom(dragging.roomId, { x, y })
+  }
+
+  function handleRoomPointerUp(e: React.PointerEvent, roomId: string, onTap: () => void) {
+    const pending = pendingMoveRef.current
+    const wasCleanPress = pending?.pointerId === e.pointerId && pending.roomId === roomId
+    const wasDragging = draggingRoomRef.current?.roomId === roomId
+    cancelPendingRoomMove()
+    if (wasDragging) {
+      draggingRoomRef.current = null
+      return
+    }
+    if (wasCleanPress) {
+      onTap()
+    }
+  }
+
   function cancelPendingRoomResize() {
     if (resizeTimerRef.current) {
       clearTimeout(resizeTimerRef.current)
@@ -345,28 +418,35 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
           >
             <img src={house.floorPlanImage} alt="집 도면" className="floorplan-image" draggable={false} />
 
-            {house.rooms.map((room) => (
-              <RoomBox
-                key={room.id}
-                room={room}
-                highlighted={room.id === highlightRoomId}
-                deleteMode={deleteMode}
-                resizeArmed={resizeArmedRoomId === room.id}
-                onResizePointerDown={(e) => handleRoomResizePointerDown(e, room.id, room.x, room.y)}
-                onResizePointerMove={handleRoomResizePointerMove}
-                onResizePointerUp={handleRoomResizePointerUp}
-                onClick={() => {
-                  if (drawMode) return
-                  if (deleteMode) {
-                    if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) {
-                      deleteRoom(room.id)
-                    }
-                    return
+            {house.rooms.map((room) => {
+              const onTap = () => {
+                if (drawMode) return
+                if (deleteMode) {
+                  if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) {
+                    deleteRoom(room.id)
                   }
-                  onOpenRoom(room.id)
-                }}
-              />
-            ))}
+                  return
+                }
+                onOpenRoom(room.id)
+              }
+              return (
+                <RoomBox
+                  key={room.id}
+                  room={room}
+                  highlighted={room.id === highlightRoomId}
+                  deleteMode={deleteMode}
+                  resizeArmed={resizeArmedRoomId === room.id}
+                  onResizePointerDown={(e) => handleRoomResizePointerDown(e, room.id, room.x, room.y)}
+                  onResizePointerMove={handleRoomResizePointerMove}
+                  onResizePointerUp={handleRoomResizePointerUp}
+                  pressing={pressingRoomId === room.id}
+                  onRoomPointerDown={(e) => handleRoomPointerDown(e, room.id, room.x, room.y)}
+                  onRoomPointerMove={handleRoomPointerMove}
+                  onRoomPointerUp={(e) => handleRoomPointerUp(e, room.id, onTap)}
+                  onClick={onTap}
+                />
+              )
+            })}
 
             {draftRect && (
               <div
@@ -424,6 +504,10 @@ function RoomBox({
   onResizePointerDown,
   onResizePointerMove,
   onResizePointerUp,
+  pressing,
+  onRoomPointerDown,
+  onRoomPointerMove,
+  onRoomPointerUp,
   onClick,
 }: {
   room: Room
@@ -433,11 +517,17 @@ function RoomBox({
   onResizePointerDown: (e: React.PointerEvent) => void
   onResizePointerMove: (e: React.PointerEvent) => void
   onResizePointerUp: (e: React.PointerEvent) => void
+  pressing: boolean
+  onRoomPointerDown: (e: React.PointerEvent) => void
+  onRoomPointerMove: (e: React.PointerEvent) => void
+  onRoomPointerUp: (e: React.PointerEvent) => void
   onClick: () => void
 }) {
   return (
     <div
-      className={`room-box ${highlighted ? 'pulse-highlight' : ''} ${deleteMode ? 'delete-target' : ''}`}
+      className={`room-box ${highlighted ? 'pulse-highlight' : ''} ${deleteMode ? 'delete-target' : ''} ${
+        pressing ? 'pressing' : ''
+      }`}
       style={{
         left: `${room.x}%`,
         top: `${room.y}%`,
@@ -445,8 +535,12 @@ function RoomBox({
         height: `${room.height}%`,
         borderColor: ROOM_KIND_COLOR[room.kind],
       }}
-      onClick={onClick}
-      title={deleteMode ? `'${room.name}' 삭제하기` : undefined}
+      onClick={deleteMode ? onClick : undefined}
+      onPointerDown={!deleteMode ? onRoomPointerDown : undefined}
+      onPointerMove={!deleteMode ? onRoomPointerMove : undefined}
+      onPointerUp={!deleteMode ? onRoomPointerUp : undefined}
+      onPointerCancel={!deleteMode ? onRoomPointerUp : undefined}
+      title={deleteMode ? `'${room.name}' 삭제하기` : '꾹 눌러서(약 1초) 위치 이동 · 탭해서 열기'}
     >
       <span className="room-box-label" style={{ background: ROOM_KIND_COLOR[room.kind] }}>
         {room.name}

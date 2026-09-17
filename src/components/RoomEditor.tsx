@@ -6,6 +6,11 @@ import { RoomKindPicker } from './RoomKindPicker'
 import { StorageDetail } from './StorageDetail'
 import './RoomEditor.css'
 
+// 도면에서 방 상자를 탭해서 이 창을 연 직후, 손가락을 뗄 때 브라우저가 뒤늦게 만들어내는
+// "유령 클릭"이 그 자리에 새로 나타난 이 창의 버튼(닫기 등)에 떨어져서 누르지도 않았는데
+// 저절로 눌리는 문제를 막기 위한 대기 시간 - 가구 보관함 편집창과 같은 규칙.
+const GHOST_CLICK_GUARD_MS = 400
+
 interface RoomEditorProps {
   room: Room
   onClose: () => void
@@ -17,6 +22,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
   const { addStorageUnit, setStorageUnitPhoto, deleteStorageUnit, updateRoom } = useHouseStore()
   const newPhotoInputRef = useRef<HTMLInputElement>(null)
   const importPhotoInputRef = useRef<HTMLInputElement>(null)
+  const openedAtRef = useRef(Date.now())
 
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
@@ -46,7 +52,16 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card room-editor-card" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card room-editor-card"
+        onClick={(e) => e.stopPropagation()}
+        onClickCapture={(e) => {
+          if (Date.now() - openedAtRef.current < GHOST_CLICK_GUARD_MS) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
+      >
         <div className="room-editor-header">
           <div>
             <input
