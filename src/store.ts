@@ -45,23 +45,45 @@ function normalizeBasketName(name: string): string {
 // 그때는 없던 필드가 비어 있어도 화면이 깨지지 않도록 기본값을 채워준다.
 // (localStorage 복원 시점과, 다른 기기와 동기화로 house를 통째로 받아올 때 모두 사용한다)
 function normalizeStorageUnit(u: StorageUnit): StorageUnit {
+  const baskets = Array.isArray(u.baskets) ? u.baskets : []
   return {
     ...UNIT_SIZE_DEFAULT,
     ...UNIT_GRID_DEFAULT,
     ...u,
-    baskets: (u.baskets ?? []).map((b) => ({ ...b, name: normalizeBasketName(b.name) })),
-    cellSplits: u.cellSplits ?? [],
+    baskets: baskets.map((b) => ({ ...b, name: normalizeBasketName(b?.name ?? '') })),
+    cellSplits: Array.isArray(u.cellSplits) ? u.cellSplits : [],
     photo: u.photo ?? null,
   }
 }
 
+// 아주 예전 버전의 저장된 데이터나, 다른 기기에서 온 손상된 데이터가 섞여 있어도
+// 앱 전체가 하얀 화면으로 멈추지 않도록, 방/수납가구 목록을 최대한 방어적으로 다듬는다.
+// 여기서 문제가 생기면 그 방/가구 하나만 건너뛰고 나머지는 그대로 살린다.
 function normalizeHouse(house: House): House {
+  const rooms = Array.isArray(house?.rooms) ? house.rooms : []
   return {
-    ...house,
-    rooms: (house.rooms ?? []).map((r) => ({
-      ...r,
-      storageUnits: (r.storageUnits ?? []).map(normalizeStorageUnit),
-    })),
+    floorPlanImage: house?.floorPlanImage ?? null,
+    rooms: rooms.flatMap((r) => {
+      try {
+        const storageUnits = Array.isArray(r.storageUnits) ? r.storageUnits : []
+        return [
+          {
+            ...r,
+            storageUnits: storageUnits.flatMap((u) => {
+              try {
+                return [normalizeStorageUnit(u)]
+              } catch (err) {
+                console.error('수납가구 데이터 하나를 복원하지 못해 건너뛰어요.', err)
+                return []
+              }
+            }),
+          },
+        ]
+      } catch (err) {
+        console.error('방 데이터 하나를 복원하지 못해 건너뛰어요.', err)
+        return []
+      }
+    }),
   }
 }
 
@@ -644,10 +666,17 @@ export const useHouseStore = create<HouseState>()(
     }),
     {
       name: 'home-storage-app',
+      // 저장된 데이터를 복원하다가 무엇이든 문제가 생기면(손상된 데이터 등),
+      // 앱이 하얀 화면으로 멈추는 대신 빈 상태로라도 켜지도록 한다.
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<HouseState> | undefined
-        if (!persisted?.house) return { ...currentState, ...persisted }
-        return { ...currentState, ...persisted, house: normalizeHouse(persisted.house) }
+        try {
+          const persisted = persistedState as Partial<HouseState> | undefined
+          if (!persisted?.house) return { ...currentState, ...persisted }
+          return { ...currentState, ...persisted, house: normalizeHouse(persisted.house) }
+        } catch (err) {
+          console.error('저장된 데이터를 불러오는 데 실패해서 빈 상태로 시작해요.', err)
+          return currentState
+        }
       },
     },
   ),

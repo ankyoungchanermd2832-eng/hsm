@@ -184,3 +184,29 @@ input[type='range'] {
     box-shadow: 0 0 0 3px var(--accent);
   }
 }
+
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.error-boundary-card {
+  max-width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 24px 22px;
+  text-align: center;
+}
+
+.error-boundary-card h2 {
+  margin-top: 0;
+}
+
+.error-boundary-card .btn {
+  margin-top: 14px;
+}
