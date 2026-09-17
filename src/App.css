@@ -82,6 +82,21 @@
   color: var(--text-h);
 }
 
+.family-sync-status {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.family-sync-status.ok {
+  color: #2e8b57;
+}
+
+.family-sync-status.error {
+  color: #c0394b;
+  font-weight: 600;
+}
+
 .family-join-row {
   display: flex;
   gap: 8px;

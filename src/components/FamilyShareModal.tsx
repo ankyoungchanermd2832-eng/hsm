@@ -1,20 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   createFamilyCode,
   getFamilyCode,
+  getSyncStatus,
   isFamilySyncAvailable,
   joinFamilyCode,
   leaveFamilyCode,
+  subscribeSyncStatus,
 } from '../familySync'
 
 interface FamilyShareModalProps {
   onClose: () => void
 }
 
+function formatAgo(ts: number): string {
+  const sec = Math.round((Date.now() - ts) / 1000)
+  if (sec < 5) return '방금 전'
+  if (sec < 60) return `${sec}초 전`
+  const min = Math.round(sec / 60)
+  return `${min}분 전`
+}
+
 export function FamilyShareModal({ onClose }: FamilyShareModalProps) {
   const [code, setCode] = useState(() => getFamilyCode())
   const [joinInput, setJoinInput] = useState('')
   const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState(() => getSyncStatus())
+
+  useEffect(() => subscribeSyncStatus(() => setStatus(getSyncStatus())), [])
 
   if (!isFamilySyncAvailable()) {
     return (
@@ -65,6 +78,13 @@ export function FamilyShareModal({ onClose }: FamilyShareModalProps) {
               <span>{code}</span>
               <button className="btn btn-sm" onClick={handleCopy}>{copied ? '복사됨!' : '복사'}</button>
             </div>
+            {status.error ? (
+              <p className="family-sync-status error">⚠️ {status.error}</p>
+            ) : status.lastSyncedAt ? (
+              <p className="family-sync-status ok">✅ 동기화됨 · {formatAgo(status.lastSyncedAt)}</p>
+            ) : (
+              <p className="family-sync-status">🔄 연결 중…</p>
+            )}
             <button className="btn btn-danger" onClick={handleLeave}>가족 공유 그만하기</button>
           </>
         ) : (
