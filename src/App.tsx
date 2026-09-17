@@ -3,6 +3,7 @@ import { useHouseStore } from './store'
 import { FloorPlanBoard } from './components/FloorPlanBoard'
 import { RoomEditor } from './components/RoomEditor'
 import { SearchBar } from './components/SearchBar'
+import { FamilyShareModal } from './components/FamilyShareModal'
 import './App.css'
 
 interface SearchTarget {
@@ -15,6 +16,7 @@ function App() {
   const house = useHouseStore((s) => s.house)
   const [openRoomId, setOpenRoomId] = useState<string | null>(null)
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null)
+  const [familyShareOpen, setFamilyShareOpen] = useState(false)
 
   const openRoom = house.rooms.find((r) => r.id === openRoomId) ?? null
 
@@ -34,7 +36,10 @@ function App() {
             <p>도면을 등록하고 방마다 수납공간을 배치한 뒤, 넣어둔 물건을 검색해서 찾아보세요.</p>
           </div>
         </div>
-        <SearchBar onJump={(roomId, unitId, basketId) => setSearchTarget({ roomId, unitId, basketId })} />
+        <div className="app-header-actions">
+          <SearchBar onJump={(roomId, unitId, basketId) => setSearchTarget({ roomId, unitId, basketId })} />
+          <button className="btn" onClick={() => setFamilyShareOpen(true)}>👪 가족 공유</button>
+        </div>
       </header>
 
       <div className="app-stats">
@@ -62,6 +67,8 @@ function App() {
           }}
         />
       )}
+
+      {familyShareOpen && <FamilyShareModal onClose={() => setFamilyShareOpen(false)} />}
     </div>
   )
 }

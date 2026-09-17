@@ -35,6 +35,64 @@
   max-width: 480px;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.family-share-card {
+  width: min(360px, 92vw);
+}
+
+.family-share-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.family-share-section:last-of-type {
+  border-bottom: none;
+}
+
+.family-share-section .btn {
+  align-self: flex-start;
+}
+
+.family-code-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 10px 0 14px;
+}
+
+.family-code-display span {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-h);
+}
+
+.family-join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.family-join-row input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
 .app-stats {
   display: flex;
   gap: 14px;
