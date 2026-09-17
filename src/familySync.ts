@@ -80,37 +80,51 @@ function startSyncForCode(code: string) {
     }, 0)
   }
 
-  function reportReadError(err: Error) {
-    // 권한 규칙 문제 등으로 못 읽으면 조용히 실패하지 않고 화면에도 보이게 한다.
-    console.error('가족 공유 데이터를 받아오지 못했어요 (권한/네트워크 문제일 수 있어요).', err)
-    setSyncStatus({ error: `동기화 오류: ${err.message}` })
+  function pushCurrentHouse() {
+    const updatedAt = Date.now()
+    lastKnownUpdatedAt = updatedAt
+    return dbSet(houseRef, { house: useHouseStore.getState().house, updatedAt } satisfies SyncPayload).then(() =>
+      setSyncStatus({ error: null, lastSyncedAt: Date.now() }),
+    )
+  }
+
+  function reportError(action: string) {
+    return (err: Error) => {
+      // 권한 규칙 문제 등으로 실패하면 조용히 실패하지 않고 화면에도 보이게 한다.
+      console.error(`가족 공유 데이터를 ${action} 못했어요 (권한/네트워크 문제일 수 있어요).`, err)
+      setSyncStatus({ error: `${action === '받아오지' ? '동기화' : '업로드'} 오류: ${err.message}` })
+    }
   }
 
   // 새로 구독을 시작할 때 onValue의 첫 콜백이 늦게 오거나 오지 않는 경우가 있어서
   // (특히 다른 기기가 만든 코드에 "참여"할 때), 한 번은 직접 즉시 읽어와서 빠르게
   // 동기화한다. 그 이후의 실시간 변경 감지는 계속 onValue가 담당한다.
+  //
+  // 이때 클라우드에 아직 아무 데이터도 없다면(코드를 막 만들었거나, 아무도 못 올렸다면)
+  // "참여하기"로 들어온 경우라도 이 기기가 가진 데이터를 그대로 올려서 공유를 시작한다.
+  // 그러지 않으면 아무도 올린 적 없는 빈 코드에 참여한 기기는 영영 빈 화면만 보게 된다.
   void get(houseRef)
-    .then((snapshot) => applyPayload(snapshot.val() as SyncPayload | null))
-    .catch(reportReadError)
+    .then((snapshot) => {
+      const payload = snapshot.val() as SyncPayload | null
+      if (!payload?.house) {
+        void pushCurrentHouse().catch(reportError('올리지'))
+        return
+      }
+      applyPayload(payload)
+    })
+    .catch(reportError('받아오지'))
 
   const listener = onValue(
     houseRef,
     (snapshot) => applyPayload(snapshot.val() as SyncPayload | null),
-    reportReadError,
+    reportError('받아오지'),
   )
 
   const storeUnsubscribe = useHouseStore.subscribe((state, prevState) => {
     if (suppressPush || state.house === prevState.house) return
     if (pushTimer) clearTimeout(pushTimer)
     pushTimer = setTimeout(() => {
-      const updatedAt = Date.now()
-      lastKnownUpdatedAt = updatedAt
-      void dbSet(houseRef, { house: useHouseStore.getState().house, updatedAt } satisfies SyncPayload)
-        .then(() => setSyncStatus({ error: null, lastSyncedAt: Date.now() }))
-        .catch((err) => {
-          console.error('가족 공유 데이터를 올리지 못했어요 (권한/네트워크 문제일 수 있어요).', err)
-          setSyncStatus({ error: `업로드 오류: ${err.message}` })
-        })
+      void pushCurrentHouse().catch(reportError('올리지'))
     }, PUSH_DEBOUNCE_MS)
   })
 
@@ -126,18 +140,9 @@ function startSyncForCode(code: string) {
 export function createFamilyCode(): string {
   const code = randomCode()
   localStorage.setItem(STORAGE_KEY, code)
+  // 새로 만든 코드는 클라우드에 아직 아무 데이터도 없으니, startSyncForCode가 처음
+  // 한 번 읽어봤을 때 비어있는 걸 확인하고 알아서 이 기기의 현재 데이터를 올려준다.
   startSyncForCode(code)
-  if (db) {
-    void dbSet(ref(db, `houses/${code}`), {
-      house: useHouseStore.getState().house,
-      updatedAt: Date.now(),
-    } satisfies SyncPayload)
-      .then(() => setSyncStatus({ error: null, lastSyncedAt: Date.now() }))
-      .catch((err) => {
-        console.error('가족 공유 코드를 만들었지만 초기 데이터를 올리지 못했어요.', err)
-        setSyncStatus({ error: `업로드 오류: ${err.message}` })
-      })
-  }
   return code
 }
 
