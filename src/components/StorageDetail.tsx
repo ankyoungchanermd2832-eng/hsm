@@ -216,6 +216,17 @@ function PhotoTierEditor({
 }) {
   const { addPhotoBasket, moveBasketPosition, resizeBasketBox, renameBasket, deleteBasket } = useHouseStore()
   const photoRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  // 손가락 두 개로 꼬집듯 확대/축소(핀치 줌)하기 위해 현재 눌려있는 손가락들을 추적한다.
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const pinchRef = useRef<{
+    startDist: number
+    startZoom: number
+    midX: number
+    midY: number
+    startScrollLeft: number
+    startScrollTop: number
+  } | null>(null)
   const [drawing, setDrawing] = useState(false)
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
   const [draftRect, setDraftRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
@@ -260,6 +271,24 @@ function PhotoTierEditor({
   // 포인터 캡처를 걸어야 드래그 도중 화면이 살짝 스크롤되거나 손가락이 살짝 벗어나도
   // 드래그가 중간에 끊기지 않는다.
   function handlePhotoPointerDown(e: React.PointerEvent) {
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (activePointersRef.current.size === 2) {
+      // 두 번째 손가락이 닿으면 핀치 줌을 시작하고, 진행 중이던 그리기/옮기기는 취소한다.
+      setDrawStart(null)
+      setDraftRect(null)
+      draggingRef.current = null
+      cancelPendingPress()
+      const [p1, p2] = Array.from(activePointersRef.current.values())
+      pinchRef.current = {
+        startDist: Math.hypot(p1.x - p2.x, p1.y - p2.y),
+        startZoom: zoom,
+        midX: (p1.x + p2.x) / 2,
+        midY: (p1.y + p2.y) / 2,
+        startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
+        startScrollTop: viewportRef.current?.scrollTop ?? 0,
+      }
+      return
+    }
     if (!drawing) return
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     const pos = relativePos(e.clientX, e.clientY)
@@ -268,6 +297,26 @@ function PhotoTierEditor({
   }
 
   function handlePhotoPointerMove(e: React.PointerEvent) {
+    if (activePointersRef.current.has(e.pointerId)) {
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    }
+    const pinch = pinchRef.current
+    if (pinch && activePointersRef.current.size === 2) {
+      const [p1, p2] = Array.from(activePointersRef.current.values())
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y)
+      const nextZoom = Math.min(PHOTO_ZOOM_MAX, Math.max(PHOTO_ZOOM_MIN, pinch.startZoom * (dist / pinch.startDist)))
+      setZoom(nextZoom)
+      const viewport = viewportRef.current
+      if (viewport) {
+        const ratio = nextZoom / pinch.startZoom
+        const rect = viewport.getBoundingClientRect()
+        const contentX = pinch.startScrollLeft + (pinch.midX - rect.left)
+        const contentY = pinch.startScrollTop + (pinch.midY - rect.top)
+        viewport.scrollLeft = contentX * ratio - (pinch.midX - rect.left)
+        viewport.scrollTop = contentY * ratio - (pinch.midY - rect.top)
+      }
+      return
+    }
     if (drawing && drawStart) {
       const pos = relativePos(e.clientX, e.clientY)
       const x = Math.min(drawStart.x, pos.x)
@@ -283,7 +332,12 @@ function PhotoTierEditor({
     moveBasketPosition(room.id, unit.id, dragging.basketId, pos.x - dragging.offsetX, pos.y - dragging.offsetY)
   }
 
-  function handlePhotoPointerUp() {
+  function handlePhotoPointerUp(e: React.PointerEvent) {
+    activePointersRef.current.delete(e.pointerId)
+    if (activePointersRef.current.size < 2) {
+      pinchRef.current = null
+    }
+    if (activePointersRef.current.size > 0) return
     if (drawing) {
       setDrawStart(null)
       if (draftRect && draftRect.width > 2 && draftRect.height > 2) {
@@ -421,7 +475,7 @@ function PhotoTierEditor({
         <button className={`btn btn-sm ${drawing ? 'btn-active' : ''}`} onClick={() => setDrawing((v) => !v)}>
           {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 보관함 추가'}
         </button>
-        <div className="zoom-controls">
+        <div className="zoom-controls" title="손가락 두 개로 꼬집듯 확대/축소할 수도 있어요">
           <button
             className="btn btn-sm"
             onClick={() => setZoom((z) => Math.max(PHOTO_ZOOM_MIN, z - PHOTO_ZOOM_STEP))}
@@ -442,7 +496,7 @@ function PhotoTierEditor({
         </div>
         <span className="hint small">🧺 표시된 영역을 탭하면 안의 물건을 편집할 수 있어요.</span>
       </div>
-      <div className={`photo-tier-viewport ${zoom > 1 ? 'zoomed' : ''}`}>
+      <div className={`photo-tier-viewport ${zoom > 1 ? 'zoomed' : ''}`} ref={viewportRef}>
         <div
           className={`photo-tier-floor ${drawing ? 'drawing' : ''}`}
           ref={photoRef}
@@ -451,6 +505,7 @@ function PhotoTierEditor({
           onPointerMove={handlePhotoPointerMove}
           onPointerUp={handlePhotoPointerUp}
           onPointerLeave={handlePhotoPointerUp}
+          onPointerCancel={handlePhotoPointerUp}
         >
         <img src={unit.photo!} alt="" className="photo-tier-image" draggable={false} />
         {photoBaskets.map((b) => {

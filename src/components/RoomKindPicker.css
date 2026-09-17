@@ -1,0 +1,57 @@
+.kind-picker {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.kind-picker-trigger {
+  font-size: 0.75rem;
+  color: #fff;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.kind-picker-outside {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: transparent;
+}
+
+.kind-picker-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  min-width: 130px;
+}
+
+.kind-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 11px 14px;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.kind-picker-option.selected {
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.kind-picker-option:hover {
+  filter: brightness(1.08);
+}

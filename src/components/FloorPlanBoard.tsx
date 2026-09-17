@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useHouseStore } from '../store'
-import { ROOM_KIND_LABEL, type Room, type RoomKind } from '../types'
+import { ROOM_KIND_COLOR, type Room, type RoomKind } from '../types'
 import { prepareFloorPlanImage } from '../utils/floorPlanStyle'
 import { detectRoomsFromFloorPlan } from '../utils/roomDetect'
+import { RoomKindPicker } from './RoomKindPicker'
 import './FloorPlanBoard.css'
 
 interface DrawRect {
@@ -15,15 +16,6 @@ interface DrawRect {
 const ZOOM_MIN = 1
 const ZOOM_MAX = 3
 const ZOOM_STEP = 0.5
-
-const ROOM_KIND_COLOR: Record<RoomKind, string> = {
-  living: '#ec9a3c',
-  kitchen: '#3ca0ec',
-  bedroom: '#a06bec',
-  bathroom: '#3cc6ec',
-  entrance: '#7a8a99',
-  other: '#8f8f8f',
-}
 
 interface FloorPlanBoardProps {
   onOpenRoom: (roomId: string) => void
@@ -328,13 +320,7 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
             </label>
             <label className="field">
               <span>방 종류</span>
-              <select value={newRoomKind} onChange={(e) => setNewRoomKind(e.target.value as RoomKind)}>
-                {Object.entries(ROOM_KIND_LABEL).map(([kind, label]) => (
-                  <option key={kind} value={kind}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <RoomKindPicker value={newRoomKind} onChange={setNewRoomKind} />
             </label>
             <div className="modal-actions">
               <button className="btn" onClick={() => setPendingRect(null)}>

@@ -47,6 +47,17 @@ export const ROOM_KIND_LABEL: Record<RoomKind, string> = {
   other: '기타',
 }
 
+// 도면 위 방 색깔과 방 종류 고르는 곳의 색깔을 똑같이 써서, 색만 보고도 어떤 방인지
+// 바로 알아볼 수 있게 한다.
+export const ROOM_KIND_COLOR: Record<RoomKind, string> = {
+  living: '#ec9a3c',
+  kitchen: '#3ca0ec',
+  bedroom: '#a06bec',
+  bathroom: '#3cc6ec',
+  entrance: '#7a8a99',
+  other: '#e0475a',
+}
+
 // 바구니 안에 든 물건
 export interface Item {
   id: string

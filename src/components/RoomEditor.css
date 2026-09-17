@@ -46,19 +46,6 @@
   background: var(--bg);
 }
 
-.room-kind-select {
-  font-size: 0.75rem;
-  background: var(--accent-bg);
-  color: var(--accent);
-  padding: 3px 20px 3px 9px;
-  border: none;
-  border-radius: 999px;
-  font-weight: 600;
-  flex-shrink: 0;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
 .room-editor-body-v2 {
   flex: 1;
   min-height: 0;

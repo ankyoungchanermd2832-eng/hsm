@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useHouseStore } from '../store'
-import { ROOM_KIND_LABEL, type Room, type StorageUnit } from '../types'
+import type { Room, StorageUnit } from '../types'
 import { compressPhoto } from '../utils/compressImage'
+import { RoomKindPicker } from './RoomKindPicker'
 import { StorageDetail } from './StorageDetail'
 import './RoomEditor.css'
 
@@ -53,17 +54,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
               value={room.name}
               onChange={(e) => updateRoom(room.id, { name: e.target.value })}
             />
-            <select
-              className="room-kind-select"
-              value={room.kind}
-              onChange={(e) => updateRoom(room.id, { kind: e.target.value as Room['kind'] })}
-            >
-              {Object.entries(ROOM_KIND_LABEL).map(([kind, label]) => (
-                <option key={kind} value={kind}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <RoomKindPicker value={room.kind} onChange={(kind) => updateRoom(room.id, { kind })} />
           </div>
         </div>
 
