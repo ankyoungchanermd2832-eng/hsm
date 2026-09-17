@@ -23,8 +23,7 @@
   margin-top: 6px;
 }
 
-.floorplan-board {
-  position: relative;
+.floorplan-viewport {
   /* 도면 사진 양옆 여백을 없애고 더 크게 보이도록, 감싸는 app-main 카드의
      좌우 padding 밖으로 꽉 채워 나간다 (버튼 같은 다른 요소는 그대로 둔다). */
   width: calc(100% + 36px);
@@ -32,9 +31,18 @@
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border);
-  touch-action: none;
-  user-select: none;
   background: #111;
+}
+
+/* 확대했을 때는 사진이 뷰포트보다 커지므로, 손가락/마우스로 끌어서 볼 수 있게 스크롤을 켠다 */
+.floorplan-viewport.zoomed {
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.floorplan-board {
+  position: relative;
+  user-select: none;
 }
 
 .floorplan-board.drawing {
@@ -133,9 +141,23 @@
 }
 
 @media (max-width: 640px) {
-  .floorplan-board {
+  .floorplan-viewport {
     /* app-main의 모바일 padding(12px)에 맞춰 꽉 채운다 */
     width: calc(100% + 24px);
     margin: 0 -12px;
   }
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.zoom-level {
+  font-size: 0.8rem;
+  color: var(--muted);
+  min-width: 42px;
+  text-align: center;
 }

@@ -33,6 +33,10 @@ const PRESS_MOVE_CANCEL_PX = 18
 // "유령 클릭"이 그 자리에 새로 나타난 편집창 버튼(사진/이모티콘 버튼 등)에 떨어져서
 // 누르지도 않았는데 저절로 눌리는 문제를 막기 위한 대기 시간.
 const GHOST_CLICK_GUARD_MS = 400
+// 가구 사진에서 수납공간을 더 정확히 표시할 수 있도록 확대해서 편집할 수 있게 한다.
+const PHOTO_ZOOM_MIN = 1
+const PHOTO_ZOOM_MAX = 3
+const PHOTO_ZOOM_STEP = 0.5
 
 interface StorageDetailProps {
   room: Room
@@ -240,6 +244,7 @@ function PhotoTierEditor({
     startY: number
   } | null>(null)
   const [resizeArmedBasketId, setResizeArmedBasketId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
 
   const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
   const openBasket = photoBaskets.find((b) => b.id === openBasketId) ?? null
@@ -416,16 +421,37 @@ function PhotoTierEditor({
         <button className={`btn btn-sm ${drawing ? 'btn-active' : ''}`} onClick={() => setDrawing((v) => !v)}>
           {drawing ? '서랍/선반을 드래그해서 표시…' : '+ 보관함 추가'}
         </button>
+        <div className="zoom-controls">
+          <button
+            className="btn btn-sm"
+            onClick={() => setZoom((z) => Math.max(PHOTO_ZOOM_MIN, z - PHOTO_ZOOM_STEP))}
+            disabled={zoom <= PHOTO_ZOOM_MIN}
+            title="축소"
+          >
+            🔍−
+          </button>
+          <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => setZoom((z) => Math.min(PHOTO_ZOOM_MAX, z + PHOTO_ZOOM_STEP))}
+            disabled={zoom >= PHOTO_ZOOM_MAX}
+            title="확대"
+          >
+            🔍+
+          </button>
+        </div>
         <span className="hint small">🧺 표시된 영역을 탭하면 안의 물건을 편집할 수 있어요.</span>
       </div>
-      <div
-        className={`photo-tier-floor ${drawing ? 'drawing' : ''}`}
-        ref={photoRef}
-        onPointerDown={handlePhotoPointerDown}
-        onPointerMove={handlePhotoPointerMove}
-        onPointerUp={handlePhotoPointerUp}
-        onPointerLeave={handlePhotoPointerUp}
-      >
+      <div className={`photo-tier-viewport ${zoom > 1 ? 'zoomed' : ''}`}>
+        <div
+          className={`photo-tier-floor ${drawing ? 'drawing' : ''}`}
+          ref={photoRef}
+          style={{ width: `${zoom * 100}%`, touchAction: drawing ? 'none' : 'pan-x pan-y' }}
+          onPointerDown={handlePhotoPointerDown}
+          onPointerMove={handlePhotoPointerMove}
+          onPointerUp={handlePhotoPointerUp}
+          onPointerLeave={handlePhotoPointerUp}
+        >
         <img src={unit.photo!} alt="" className="photo-tier-image" draggable={false} />
         {photoBaskets.map((b) => {
           const width = b.width ?? DEFAULT_BOX_SIZE.width
@@ -481,6 +507,7 @@ function PhotoTierEditor({
           />
         )}
         {drawing && <div className="placing-hint">사진에서 실제 서랍/선반 영역만큼 드래그하세요</div>}
+        </div>
       </div>
 
       {openBasket && (

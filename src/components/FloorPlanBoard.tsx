@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useHouseStore } from '../store'
 import { ROOM_KIND_LABEL, type Room, type RoomKind } from '../types'
-import { stylizeFloorPlanImage } from '../utils/floorPlanStyle'
+import { prepareFloorPlanImage } from '../utils/floorPlanStyle'
 import { detectRoomsFromFloorPlan } from '../utils/roomDetect'
 import './FloorPlanBoard.css'
 
@@ -11,6 +11,10 @@ interface DrawRect {
   width: number
   height: number
 }
+
+const ZOOM_MIN = 1
+const ZOOM_MAX = 3
+const ZOOM_STEP = 0.5
 
 const ROOM_KIND_COLOR: Record<RoomKind, string> = {
   living: '#ec9a3c',
@@ -40,6 +44,7 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
   const [newRoomKind, setNewRoomKind] = useState<RoomKind>('living')
   const [processingStage, setProcessingStage] = useState<'styling' | 'detecting' | null>(null)
   const processingImage = processingStage !== null
+  const [zoom, setZoom] = useState(1)
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -48,10 +53,10 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
     setProcessingStage('styling')
     let stylized: string
     try {
-      stylized = await stylizeFloorPlanImage(file)
+      stylized = await prepareFloorPlanImage(file)
       setFloorPlanImage(stylized)
     } catch (err) {
-      console.error('도면 이미지를 다듬는 데 실패해서 원본 사진을 사용해요.', err)
+      console.error('도면 이미지를 준비하는 데 실패해서 원본 사진을 사용해요.', err)
       const reader = new FileReader()
       const dataUrl = await new Promise<string>((resolve) => {
         reader.onload = () => resolve(reader.result as string)
@@ -161,12 +166,33 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
         >
           {deleteMode ? '🗑️ 삭제할 방을 눌러주세요' : '🗑️ 방 삭제'}
         </button>
+        {house.floorPlanImage && (
+          <div className="zoom-controls">
+            <button
+              className="btn btn-sm"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+              disabled={zoom <= ZOOM_MIN}
+              title="축소"
+            >
+              🔍−
+            </button>
+            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+            <button
+              className="btn btn-sm"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+              disabled={zoom >= ZOOM_MAX}
+              title="확대"
+            >
+              🔍+
+            </button>
+          </div>
+        )}
       </div>
 
       {processingStage === 'styling' && (
         <div className="floorplan-empty">
-          <p>✨ 도면 사진을 더 깔끔하게 다듬고 있어요…</p>
-          <p className="hint">원래 벽 구조와 형태는 그대로 유지하면서 색과 잡음만 정리해요.</p>
+          <p>✨ 도면 사진을 준비하고 있어요…</p>
+          <p className="hint">색은 원본 그대로 유지하고, 용량만 적당히 줄여요.</p>
         </div>
       )}
 
@@ -183,50 +209,53 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
       {!processingImage && !house.floorPlanImage && (
         <div className="floorplan-empty">
           <p>먼저 우리집 도면 사진을 업로드해주세요.</p>
-          <p className="hint">업로드하면 자동으로 깔끔하게 다듬고, 벽 구조를 보고 방도 자동으로 나눠드려요.</p>
+          <p className="hint">업로드한 사진은 색 그대로 쓰고, 벽 구조를 보고 방도 자동으로 나눠드려요.</p>
         </div>
       )}
 
       {!processingImage && house.floorPlanImage && (
-        <div
-          className={`floorplan-board ${drawMode ? 'drawing' : ''}`}
-          ref={boardRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-        >
-          <img src={house.floorPlanImage} alt="집 도면" className="floorplan-image" draggable={false} />
+        <div className={`floorplan-viewport ${zoom > 1 ? 'zoomed' : ''}`}>
+          <div
+            className={`floorplan-board ${drawMode ? 'drawing' : ''}`}
+            ref={boardRef}
+            style={{ width: `${zoom * 100}%`, touchAction: drawMode ? 'none' : 'pan-x pan-y' }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+          >
+            <img src={house.floorPlanImage} alt="집 도면" className="floorplan-image" draggable={false} />
 
-          {house.rooms.map((room) => (
-            <RoomBox
-              key={room.id}
-              room={room}
-              highlighted={room.id === highlightRoomId}
-              deleteMode={deleteMode}
-              onClick={() => {
-                if (drawMode) return
-                if (deleteMode) {
-                  if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) {
-                    deleteRoom(room.id)
+            {house.rooms.map((room) => (
+              <RoomBox
+                key={room.id}
+                room={room}
+                highlighted={room.id === highlightRoomId}
+                deleteMode={deleteMode}
+                onClick={() => {
+                  if (drawMode) return
+                  if (deleteMode) {
+                    if (confirm(`'${room.name}' 방을 삭제할까요? 안의 수납공간 정보도 함께 삭제됩니다.`)) {
+                      deleteRoom(room.id)
+                    }
+                    return
                   }
-                  return
-                }
-                onOpenRoom(room.id)
-              }}
-            />
-          ))}
+                  onOpenRoom(room.id)
+                }}
+              />
+            ))}
 
-          {draftRect && (
-            <div
-              className="room-draft"
-              style={{
-                left: `${draftRect.x}%`,
-                top: `${draftRect.y}%`,
-                width: `${draftRect.width}%`,
-                height: `${draftRect.height}%`,
-              }}
-            />
-          )}
+            {draftRect && (
+              <div
+                className="room-draft"
+                style={{
+                  left: `${draftRect.x}%`,
+                  top: `${draftRect.y}%`,
+                  width: `${draftRect.width}%`,
+                  height: `${draftRect.height}%`,
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
 
