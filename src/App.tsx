@@ -4,6 +4,7 @@ import { FloorPlanBoard } from './components/FloorPlanBoard'
 import { RoomEditor } from './components/RoomEditor'
 import { SearchBar } from './components/SearchBar'
 import { FamilyShareModal } from './components/FamilyShareModal'
+import { InstallBanner } from './components/InstallBanner'
 import './App.css'
 
 interface SearchTarget {
@@ -41,6 +42,8 @@ function App() {
           <button className="btn" onClick={() => setFamilyShareOpen(true)}>👪 가족 공유</button>
         </div>
       </header>
+
+      <InstallBanner />
 
       <div className="app-stats">
         <span>🚪 방 {house.rooms.length}개</span>

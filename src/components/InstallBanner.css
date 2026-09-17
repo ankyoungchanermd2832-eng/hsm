@@ -1,0 +1,36 @@
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  color: var(--text-h);
+}
+
+.install-banner p {
+  margin: 0;
+  flex: 1;
+  line-height: 1.5;
+}
+
+.install-banner .btn {
+  margin-left: 4px;
+}
+
+.install-banner-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  padding: 4px;
+}
+
+.install-banner-close:hover {
+  color: var(--text-h);
+}
