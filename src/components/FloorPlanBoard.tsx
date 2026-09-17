@@ -17,13 +17,17 @@ const ZOOM_MIN = 1
 const ZOOM_MAX = 3
 const ZOOM_STEP = 0.5
 
+// 방 크기 조정 손잡이도 가구 사진의 보관함처럼 꾹 눌러야(약 1초) 활성화된다.
+const LONG_PRESS_MS = 1000
+const PRESS_MOVE_CANCEL_PX = 18
+
 interface FloorPlanBoardProps {
   onOpenRoom: (roomId: string) => void
   highlightRoomId?: string | null
 }
 
 export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardProps) {
-  const { house, setFloorPlanImage, addRoom, deleteRoom } = useHouseStore()
+  const { house, setFloorPlanImage, addRoom, updateRoom, deleteRoom } = useHouseStore()
   const boardRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -48,6 +52,77 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
   const [processingStage, setProcessingStage] = useState<'styling' | 'detecting' | null>(null)
   const processingImage = processingStage !== null
   const [zoom, setZoom] = useState(1)
+
+  // 방 테두리 크기 조정
+  const resizingRoomRef = useRef<{ roomId: string; anchorX: number; anchorY: number } | null>(null)
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingResizeRef = useRef<{
+    roomId: string
+    pointerId: number
+    anchorX: number
+    anchorY: number
+    startX: number
+    startY: number
+  } | null>(null)
+  const [resizeArmedRoomId, setResizeArmedRoomId] = useState<string | null>(null)
+
+  function cancelPendingRoomResize() {
+    if (resizeTimerRef.current) {
+      clearTimeout(resizeTimerRef.current)
+      resizeTimerRef.current = null
+    }
+    pendingResizeRef.current = null
+    setResizeArmedRoomId(null)
+  }
+
+  // 방 상자 오른쪽 아래 손잡이도 꾹 눌러야(약 1초) 크기 조정이 활성화된다 - 가구 보관함과 같은 규칙.
+  // 그래야 방을 열려고 살짝 탭했을 때 실수로 크기가 바뀌지 않는다.
+  function handleRoomResizePointerDown(e: React.PointerEvent, roomId: string, anchorX: number, anchorY: number) {
+    e.stopPropagation()
+    e.preventDefault()
+    const pointerId = e.pointerId
+    ;(e.target as HTMLElement).setPointerCapture(pointerId)
+    pendingResizeRef.current = { roomId, pointerId, anchorX, anchorY, startX: e.clientX, startY: e.clientY }
+    setResizeArmedRoomId(roomId)
+    if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
+    resizeTimerRef.current = setTimeout(() => {
+      resizeTimerRef.current = null
+      const pending = pendingResizeRef.current
+      if (pending?.roomId === roomId && pending.pointerId === pointerId) {
+        resizingRoomRef.current = { roomId, anchorX: pending.anchorX, anchorY: pending.anchorY }
+        pendingResizeRef.current = null
+      }
+    }, LONG_PRESS_MS)
+  }
+
+  function handleRoomResizePointerMove(e: React.PointerEvent) {
+    const resizing = resizingRoomRef.current
+    if (resizing) {
+      e.stopPropagation()
+      const pos = relativePos(e.clientX, e.clientY)
+      const width = Math.max(3, Math.min(100 - resizing.anchorX, pos.x - resizing.anchorX))
+      const height = Math.max(3, Math.min(100 - resizing.anchorY, pos.y - resizing.anchorY))
+      updateRoom(resizing.roomId, { width, height })
+      return
+    }
+    const pending = pendingResizeRef.current
+    if (!pending || pending.pointerId !== e.pointerId) return
+    const dx = e.clientX - pending.startX
+    const dy = e.clientY - pending.startY
+    if (Math.hypot(dx, dy) > PRESS_MOVE_CANCEL_PX) {
+      cancelPendingRoomResize()
+    }
+  }
+
+  function handleRoomResizePointerUp(e: React.PointerEvent) {
+    if (resizingRoomRef.current) {
+      e.stopPropagation()
+      resizingRoomRef.current = null
+      setResizeArmedRoomId(null)
+      return
+    }
+    cancelPendingRoomResize()
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -276,6 +351,10 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
                 room={room}
                 highlighted={room.id === highlightRoomId}
                 deleteMode={deleteMode}
+                resizeArmed={resizeArmedRoomId === room.id}
+                onResizePointerDown={(e) => handleRoomResizePointerDown(e, room.id, room.x, room.y)}
+                onResizePointerMove={handleRoomResizePointerMove}
+                onResizePointerUp={handleRoomResizePointerUp}
                 onClick={() => {
                   if (drawMode) return
                   if (deleteMode) {
@@ -341,11 +420,19 @@ function RoomBox({
   room,
   highlighted,
   deleteMode,
+  resizeArmed,
+  onResizePointerDown,
+  onResizePointerMove,
+  onResizePointerUp,
   onClick,
 }: {
   room: Room
   highlighted: boolean
   deleteMode: boolean
+  resizeArmed: boolean
+  onResizePointerDown: (e: React.PointerEvent) => void
+  onResizePointerMove: (e: React.PointerEvent) => void
+  onResizePointerUp: (e: React.PointerEvent) => void
   onClick: () => void
 }) {
   return (
@@ -365,6 +452,19 @@ function RoomBox({
         {room.name}
         <em>({room.storageUnits.length})</em>
       </span>
+      {!deleteMode && (
+        <div
+          className={`room-resize-handle ${resizeArmed ? 'armed' : ''}`}
+          style={{ background: ROOM_KIND_COLOR[room.kind] }}
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          onPointerCancel={onResizePointerUp}
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          title="꾹 눌러서(약 1초) 크기 조정 활성화"
+        />
+      )}
     </div>
   )
 }
