@@ -16,9 +16,10 @@ interface RoomEditorProps {
   onClose: () => void
   highlightUnitId?: string | null
   highlightBasketId?: string | null
+  highlightItemId?: string | null
 }
 
-export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }: RoomEditorProps) {
+export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId, highlightItemId }: RoomEditorProps) {
   const { addStorageUnit, setStorageUnitPhoto, deleteStorageUnit, updateRoom } = useHouseStore()
   const newPhotoInputRef = useRef<HTMLInputElement>(null)
   const importPhotoInputRef = useRef<HTMLInputElement>(null)
@@ -126,6 +127,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId }
           room={room}
           unit={selectedUnit}
           highlightBasketId={highlightBasketId}
+          highlightItemId={highlightItemId}
           onClose={() => setSelectedUnitId(null)}
           onDelete={() => {
             deleteStorageUnit(room.id, selectedUnit.id)

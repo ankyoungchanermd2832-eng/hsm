@@ -4,7 +4,7 @@ import { STORAGE_TYPE_ICON, type SearchResult } from '../types'
 import './SearchBar.css'
 
 interface SearchBarProps {
-  onJump: (roomId: string, unitId: string, basketId: string) => void
+  onJump: (roomId: string, unitId: string, basketId: string, itemId: string) => void
 }
 
 export function SearchBar({ onJump }: SearchBarProps) {
@@ -40,7 +40,7 @@ export function SearchBar({ onJump }: SearchBarProps) {
                 className="search-result-item"
                 title="클릭하면 도면에서 방이 깜빡여요"
                 onMouseDown={() => {
-                  onJump(r.room.id, r.storageUnit.id, r.basket.id)
+                  onJump(r.room.id, r.storageUnit.id, r.basket.id, r.item.id)
                   setOpen(false)
                   setQuery('')
                 }}

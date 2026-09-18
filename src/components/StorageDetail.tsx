@@ -42,11 +42,12 @@ interface StorageDetailProps {
   room: Room
   unit: StorageUnit
   highlightBasketId?: string | null
+  highlightItemId?: string | null
   onClose: () => void
   onDelete: () => void
 }
 
-export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete }: StorageDetailProps) {
+export function StorageDetail({ room, unit, highlightBasketId, highlightItemId, onClose, onDelete }: StorageDetailProps) {
   const {
     addBasket,
     renameBasket,
@@ -118,7 +119,12 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
         )}
 
         {photoMode ? (
-          <PhotoTierEditor room={room} unit={unit} highlightBasketId={highlightBasketId} />
+          <PhotoTierEditor
+            room={room}
+            unit={unit}
+            highlightBasketId={highlightBasketId}
+            highlightItemId={highlightItemId}
+          />
         ) : (
           <div className="shelf-grid-wrap">
             <p className="hint small">
@@ -162,6 +168,7 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
                           col={c}
                           split={split}
                           highlightBasketId={highlightBasketId}
+                          highlightItemId={highlightItemId}
                         />
                       ) : basket ? (
                         <BasketPanel
@@ -173,6 +180,7 @@ export function StorageDetail({ room, unit, highlightBasketId, onClose, onDelete
                           items={basket.items}
                           emptyCells={emptyCells}
                           highlighted={basket.id === highlightBasketId}
+                          highlightItemId={highlightItemId}
                           onRename={(name) => renameBasket(room.id, unit.id, basket.id, name)}
                           onMove={(row, col, subRow, subCol) =>
                             moveBasketToCell(room.id, unit.id, basket.id, row, col, subRow, subCol)
@@ -209,10 +217,12 @@ function PhotoTierEditor({
   room,
   unit,
   highlightBasketId,
+  highlightItemId,
 }: {
   room: Room
   unit: StorageUnit
   highlightBasketId?: string | null
+  highlightItemId?: string | null
 }) {
   const { addPhotoBasket, moveBasketPosition, resizeBasketBox, renameBasket, deleteBasket } = useHouseStore()
   const photoRef = useRef<HTMLDivElement>(null)
@@ -596,7 +606,13 @@ function PhotoTierEditor({
                 }
               }}
             />
-            <ItemList roomId={room.id} unitId={unit.id} basketId={openBasket.id} items={openBasket.items} />
+            <ItemList
+              roomId={room.id}
+              unitId={unit.id}
+              basketId={openBasket.id}
+              items={openBasket.items}
+              highlightItemId={highlightItemId}
+            />
             <button className="btn" onClick={() => setOpenBasketId(null)}>
               닫기 ✕
             </button>
@@ -690,6 +706,7 @@ function SplitCellPanel({
   col,
   split,
   highlightBasketId,
+  highlightItemId,
 }: {
   room: Room
   unit: StorageUnit
@@ -697,6 +714,7 @@ function SplitCellPanel({
   col: number
   split: CellSplit
   highlightBasketId?: string | null
+  highlightItemId?: string | null
 }) {
   const { addBasket, renameBasket, moveBasketToCell, deleteBasket, unsplitCell } = useHouseStore()
   const baskets = unit.baskets.filter((b) => b.row === row && b.col === col && b.subRow !== undefined)
@@ -742,6 +760,7 @@ function SplitCellPanel({
                     items={subBasket.items}
                     emptyCells={siblingEmpty}
                     highlighted={subBasket.id === highlightBasketId}
+                    highlightItemId={highlightItemId}
                     compact
                     onRename={(name) => renameBasket(room.id, unit.id, subBasket.id, name)}
                     onMove={(r, c, subRow, subCol) => moveBasketToCell(room.id, unit.id, subBasket.id, r, c, subRow, subCol)}
@@ -785,6 +804,7 @@ function BasketPanel({
   items,
   emptyCells,
   highlighted,
+  highlightItemId,
   compact,
   showItemList = true,
   onRename,
@@ -798,6 +818,7 @@ function BasketPanel({
   items: StorageUnit['baskets'][number]['items']
   emptyCells: MoveTarget[]
   highlighted: boolean
+  highlightItemId?: string | null
   compact?: boolean
   showItemList?: boolean
   onRename: (name: string) => void
@@ -879,7 +900,9 @@ function BasketPanel({
         </select>
       )}
 
-      {showItemList && <ItemList roomId={roomId} unitId={unitId} basketId={basketId} items={items} />}
+      {showItemList && (
+        <ItemList roomId={roomId} unitId={unitId} basketId={basketId} items={items} highlightItemId={highlightItemId} />
+      )}
 
       <div className="item-add-row">
         <input
@@ -961,11 +984,13 @@ function ItemList({
   unitId,
   basketId,
   items,
+  highlightItemId,
 }: {
   roomId: string
   unitId: string
   basketId: string
   items: StorageUnit['baskets'][number]['items']
+  highlightItemId?: string | null
 }) {
   const { deleteItem } = useHouseStore()
   const sortedItems = sortByName(items)
@@ -975,7 +1000,7 @@ function ItemList({
   return (
     <ul className="item-grid">
       {sortedItems.map((item) => (
-        <li key={item.id} className="item-chip">
+        <li key={item.id} className={`item-chip ${item.id === highlightItemId ? 'pulse-highlight' : ''}`}>
           {item.photo ? (
             <img src={item.photo} alt="" className="item-photo-thumb" />
           ) : (

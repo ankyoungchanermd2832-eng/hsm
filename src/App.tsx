@@ -11,6 +11,7 @@ interface SearchTarget {
   roomId: string
   unitId: string
   basketId: string
+  itemId: string
 }
 
 function App() {
@@ -38,7 +39,9 @@ function App() {
           </div>
         </div>
         <div className="app-header-actions">
-          <SearchBar onJump={(roomId, unitId, basketId) => setSearchTarget({ roomId, unitId, basketId })} />
+          <SearchBar
+            onJump={(roomId, unitId, basketId, itemId) => setSearchTarget({ roomId, unitId, basketId, itemId })}
+          />
           <button className="btn" onClick={() => setFamilyShareOpen(true)}>👪 가족 공유</button>
         </div>
       </header>
@@ -64,6 +67,7 @@ function App() {
           room={openRoom}
           highlightUnitId={searchTarget?.roomId === openRoom.id ? searchTarget.unitId : null}
           highlightBasketId={searchTarget?.roomId === openRoom.id ? searchTarget.basketId : null}
+          highlightItemId={searchTarget?.roomId === openRoom.id ? searchTarget.itemId : null}
           onClose={() => {
             setOpenRoomId(null)
             setSearchTarget(null)
