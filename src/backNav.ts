@@ -10,6 +10,9 @@ const stack: CloseFn[] = []
 // 이미 닫힌 창을 히스토리에도 반영하는 것뿐이므로, 그 이벤트가 오면 스택을 건드리지 않고
 // 그냥 넘긴다 - 이 값으로 그런 '메아리' popstate를 셀 수 만큼 구분해서 걸러낸다.
 let pendingSkips = 0
+// 지금까지 우리가 pushState로 쌓아올린 히스토리 항목 수 - 종료할 때 이만큼만 정확히
+// 되돌려서, 앱이 시작되기 전(원래 있던 자리)까지만 되돌아가게 한다.
+let totalPushed = 0
 let exitAttemptHandler: (() => void) | null = null
 let listenerAttached = false
 
@@ -38,6 +41,7 @@ function ensureListener() {
 export function pushBackable(onClose: CloseFn): () => void {
   ensureListener()
   window.history.pushState({}, '')
+  totalPushed++
   stack.push(onClose)
   return () => {
     const idx = stack.lastIndexOf(onClose)
@@ -53,6 +57,22 @@ export function initExitGuard(onExitAttempt: () => void) {
   ensureListener()
   exitAttemptHandler = onExitAttempt
   window.history.pushState({ hsmGuard: true }, '')
+  totalPushed++
+}
+
+/** 종료 확인창에서 '예'를 눌렀을 때 호출한다. 브라우저는 보안상 웹페이지가 스스로 탭을
+ *  완전히 닫는 걸 대부분 허용하지 않는다 - 그래도 되는 환경(설치된 PWA 등)에서는
+ *  window.close()가 통하고, 안 되는 환경에서는 우리가 쌓아둔 히스토리를 앱이 시작되기
+ *  전 자리까지 모두 되돌려놔서, 뒤로가기를 한 번 더 누르면 확실히 종료되게 해둔다. */
+export function attemptExit() {
+  window.close()
+  if (totalPushed > 0) {
+    pendingSkips += totalPushed
+    const steps = totalPushed
+    totalPushed = 0
+    stack.length = 0
+    window.history.go(-steps)
+  }
 }
 
 /** 창(모달)을 여닫는 컴포넌트에서 쓰는 훅. isOpen이 true인 동안 뒤로가기를 가로채서

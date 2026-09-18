@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { initExitGuard } from './backNav'
+import { attemptExit, initExitGuard } from './backNav'
 import { useHouseStore } from './store'
 import { FloorPlanBoard } from './components/FloorPlanBoard'
 import { RoomEditor } from './components/RoomEditor'
@@ -107,7 +107,7 @@ function App() {
                 className="btn btn-danger"
                 onClick={() => {
                   setExitConfirmOpen(false)
-                  window.close()
+                  attemptExit()
                 }}
               >
                 예
