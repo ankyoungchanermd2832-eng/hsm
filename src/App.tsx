@@ -21,9 +21,19 @@ function App() {
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null)
   const [familyShareOpen, setFamilyShareOpen] = useState(false)
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false)
+  const [exitPrimed, setExitPrimed] = useState(false)
 
   // 메인 화면(아무 창도 안 열린 상태)에서 뒤로가기를 누르면 앱을 바로 끄지 않고 물어본다.
   useEffect(() => initExitGuard(() => setExitConfirmOpen(true)), [])
+
+  // 브라우저는 보안상 페이지가 스스로 탭을 완전히 닫는 걸 대부분 허용하지 않는다.
+  // attemptExit()가 히스토리는 다 정리해놔서 이 상태에서 뒤로가기를 한 번 더 누르면
+  // 확실히 꺼지지만, 아무 안내 없이는 "예"를 눌러도 안 꺼지는 것처럼 보이므로 알려준다.
+  useEffect(() => {
+    if (!exitPrimed) return
+    const timer = setTimeout(() => setExitPrimed(false), 5000)
+    return () => clearTimeout(timer)
+  }, [exitPrimed])
 
   const isHome = !openRoomId && !familyShareOpen
   function goHome() {
@@ -108,6 +118,7 @@ function App() {
                 onClick={() => {
                   setExitConfirmOpen(false)
                   attemptExit()
+                  setExitPrimed(true)
                 }}
               >
                 예
@@ -116,6 +127,8 @@ function App() {
           </div>
         </div>
       )}
+
+      {exitPrimed && <div className="exit-toast">🚪 뒤로가기를 한 번 더 누르면 종료돼요</div>}
     </div>
   )
 }
