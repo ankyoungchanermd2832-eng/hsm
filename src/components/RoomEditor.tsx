@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useBackClose } from '../backNav'
 import { useHouseStore } from '../store'
 import type { Room, StorageUnit } from '../types'
 import { compressPhoto } from '../utils/compressImage'
@@ -24,6 +25,7 @@ export function RoomEditor({ room, onClose, highlightUnitId, highlightBasketId, 
   const newPhotoInputRef = useRef<HTMLInputElement>(null)
   const importPhotoInputRef = useRef<HTMLInputElement>(null)
   const openedAtRef = useRef(Date.now())
+  useBackClose(true, onClose)
 
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)

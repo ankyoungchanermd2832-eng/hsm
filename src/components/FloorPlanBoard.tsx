@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useBackClose } from '../backNav'
 import { useHouseStore } from '../store'
 import { ROOM_KIND_COLOR, type Room, type RoomKind } from '../types'
 import { prepareFloorPlanImage } from '../utils/floorPlanStyle'
@@ -52,6 +53,7 @@ export function FloorPlanBoard({ onOpenRoom, highlightRoomId }: FloorPlanBoardPr
   const [processingStage, setProcessingStage] = useState<'styling' | 'detecting' | null>(null)
   const processingImage = processingStage !== null
   const [zoom, setZoom] = useState(1)
+  useBackClose(pendingRect !== null, () => setPendingRect(null))
 
   // 방 테두리 크기 조정
   const resizingRoomRef = useRef<{ roomId: string; anchorX: number; anchorY: number } | null>(null)

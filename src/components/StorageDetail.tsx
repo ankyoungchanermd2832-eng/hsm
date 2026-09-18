@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useBackClose } from '../backNav'
 import { useHouseStore } from '../store'
 import {
   CELL_SPLIT_DEFAULT,
@@ -61,6 +62,7 @@ export function StorageDetail({ room, unit, highlightBasketId, highlightItemId, 
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [photoProcessing, setPhotoProcessing] = useState(false)
   const photoMode = !!unit.photo
+  useBackClose(true, onClose)
 
   const visual = getUnitVisual(unit)
 
@@ -269,6 +271,7 @@ function PhotoTierEditor({
 
   const photoBaskets = unit.baskets.filter((b) => b.x !== undefined && b.y !== undefined)
   const openBasket = photoBaskets.find((b) => b.id === openBasketId) ?? null
+  useBackClose(openBasketId !== null, () => setOpenBasketId(null))
 
   function relativePos(clientX: number, clientY: number) {
     const rect = photoRef.current!.getBoundingClientRect()

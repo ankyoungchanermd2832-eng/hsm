@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { initExitGuard } from './backNav'
 import { useHouseStore } from './store'
 import { FloorPlanBoard } from './components/FloorPlanBoard'
 import { RoomEditor } from './components/RoomEditor'
@@ -19,6 +20,17 @@ function App() {
   const [openRoomId, setOpenRoomId] = useState<string | null>(null)
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null)
   const [familyShareOpen, setFamilyShareOpen] = useState(false)
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false)
+
+  // 메인 화면(아무 창도 안 열린 상태)에서 뒤로가기를 누르면 앱을 바로 끄지 않고 물어본다.
+  useEffect(() => initExitGuard(() => setExitConfirmOpen(true)), [])
+
+  const isHome = !openRoomId && !familyShareOpen
+  function goHome() {
+    setOpenRoomId(null)
+    setFamilyShareOpen(false)
+    setSearchTarget(null)
+  }
 
   const openRoom = house.rooms.find((r) => r.id === openRoomId) ?? null
 
@@ -76,6 +88,34 @@ function App() {
       )}
 
       {familyShareOpen && <FamilyShareModal onClose={() => setFamilyShareOpen(false)} />}
+
+      {!isHome && (
+        <button className="home-fab" onClick={goHome} title="메인 화면으로">
+          🏠 홈
+        </button>
+      )}
+
+      {exitConfirmOpen && (
+        <div className="modal-backdrop" onClick={() => setExitConfirmOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>앱을 종료하시겠습니까?</h3>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setExitConfirmOpen(false)}>
+                아니오
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  setExitConfirmOpen(false)
+                  window.close()
+                }}
+              >
+                예
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

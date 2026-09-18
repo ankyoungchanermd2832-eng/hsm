@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useBackClose } from '../backNav'
 import {
   createFamilyCode,
   getFamilyCode,
@@ -28,6 +29,7 @@ export function FamilyShareModal({ onClose }: FamilyShareModalProps) {
   const [status, setStatus] = useState(() => getSyncStatus())
 
   useEffect(() => subscribeSyncStatus(() => setStatus(getSyncStatus())), [])
+  useBackClose(true, onClose)
 
   if (!isFamilySyncAvailable()) {
     return (

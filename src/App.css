@@ -131,6 +131,27 @@
   padding: 18px;
 }
 
+/* 어떤 창이 열려있든 항상 눌러서 메인 화면으로 돌아갈 수 있는 버튼 - 열려있는 모든
+   창(모달)보다 위에 떠 있어야 해서 z-index를 modal-backdrop(100)보다 높게 잡는다. */
+.home-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding: 14px 12px 40px;
